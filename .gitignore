@@ -1,0 +1,4 @@
+node_modules/
+dist/
+.env
+# NOTE: .kiro is intentionally NOT ignored. Kiroween requires /.kiro at the repo root.
