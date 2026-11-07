@@ -2,148 +2,261 @@
 
 ## 1. Overview
 
-Spectre Scribe is a native macOS multi-agent novel writing studio. The user supplies
-a sample passage (their own writing or public-domain text only). The app derives
-style statistics from it, builds a story bible, then orchestrates four Kiro Crew
-agents in relay to draft a 3-chapter science-fiction short story, with a continuity
-hook enforcing consistency after every chapter draft.
+Spectre Scribe is a Next.js 15 full-stack Web app. The user supplies a sample
+passage through the browser, the app derives quantitative style statistics, the
+user edits a story bible, and a server-side pipeline orchestrates four agents in
+relay to draft a 3-chapter science-fiction short story. A continuity check runs
+before every chapter is accepted.
 
-Kiroween 2026 track: Frankenstein (combining things that do not normally go together —
-namely, quantitative style analysis fused with narrative AI relay writing).
+The browser and server live in the same repository. The browser uses React 19,
+TypeScript, Tailwind CSS 4, and shadcn/ui. Next.js App Router Route Handlers are
+the backend boundary. The Kiroween 2026 track is Frankenstein: quantitative style
+analysis is combined with a narrative AI relay pipeline.
+
+The demo plot, character names, and sample passage are TBD. They SHALL NOT be
+invented or hardcoded in this specification.
 
 ## 2. Functional Requirements
 
 ### 2.1 Sample ingestion
 
-REQ-01: The user SHALL be able to paste or import a text passage (their own writing
-        or public-domain text only) through the native macOS UI.
+REQ-01: The user SHALL be able to paste or import a text passage through the Web
+        UI. The passage SHALL be the user's own writing or public-domain text only.
 
-REQ-02: The system SHALL reject empty input and input shorter than 200 words with a
-        clear validation message shown in the UI.
+REQ-02: The system SHALL reject empty input and input shorter than 200 words with
+        a clear validation message shown in the Web UI.
 
-REQ-03: The system SHALL NOT crawl, fetch, or store any text from commercial novel
-        sites or copyrighted sources.
+REQ-03: The system SHALL NOT crawl, fetch, or store text from commercial novel
+        sites or other copyrighted sources. The sample input is supplied by the
+        user and is not retrieved by the application.
 
 ### 2.2 Style statistics
 
-REQ-04: Given the sample passage, the system SHALL compute the following style
-        metrics and expose them as a structured document (the "style profile"):
+REQ-04: Given a valid sample passage, the system SHALL compute exactly these eight
+        quantitative style metrics and expose them as a structured style profile:
 
-        a. Mean and standard deviation of sentence length (words per sentence).
-        b. Vocabulary richness: type-token ratio over the full sample.
-        c. Dialogue ratio: percentage of word-count that is inside quotation marks.
-        d. Pacing markers: count of em-dashes, ellipses, and sentence-final
-           punctuation (`.`, `!`, `?`) per 100 words.
-        e. Paragraph length distribution: mean and SD of words per paragraph.
-        f. Average word length (characters per word, stopwords excluded).
+        a. Sentence-length mean: the mean number of words in each sentence, using
+           `.`, `!`, and `?` as sentence-final boundaries.
+        b. Sentence-length standard deviation: the standard deviation of the same
+           sentence word-count values.
+        c. Vocabulary richness: type-token ratio over the full sample, calculated
+           as unique normalized tokens divided by total normalized tokens. Tokens
+           are lowercased and punctuation is removed.
+        d. Dialogue ratio: the proportion of all word tokens that occurs inside
+           quotation marks.
+        e. Pacing markers: the count per 100 words of em-dashes, ellipses, and
+           sentence-final punctuation (`.`, `!`, `?`). These three counts are the
+           subfields of one pacing-marker metric.
+        f. Paragraph-length mean: the mean number of words in each paragraph,
+           with paragraphs split on blank lines.
+        g. Paragraph-length standard deviation: the standard deviation of the same
+           paragraph word-count values.
+        h. Average word length: mean characters per word after stopwords are
+           excluded.
 
-REQ-05: The style profile SHALL be held in the app's in-memory session state and
-        passed to the style agent as a named input.
+        The implementation SHALL retain these definitions when serialising and
+        displaying the profile; it SHALL NOT replace them with an unquantified
+        style description.
+
+REQ-05: Style analysis SHALL run in the pure TypeScript module
+        `lib/style-analyser.ts`, with no network or file I/O. The resulting style
+        profile SHALL be held in React session state and passed to the style agent
+        as a named input. The module SHALL be unit-tested with Vitest.
 
 ### 2.3 Story bible
 
-REQ-06: The system SHALL generate a story bible before chapter drafting begins. The
-        story bible SHALL contain:
+REQ-06: Before chapter drafting begins, the system SHALL create a story bible
+        with this schema. Field names and nested relationships are part of the
+        contract:
 
-        a. Genre and tone statement.
-        b. Setting: time period, location(s), world rules (one paragraph each).
-        c. Character roster: name, role (protagonist / antagonist / supporting),
-           initial status (alive), and one-sentence description for each character.
-        d. Foreshadowing list: each entry has an ID, a brief description of the
-           planted element, and a "status" field (open | paid-off | dropped).
-           Dropped is invalid and will be caught by the continuity hook.
-        e. Timeline: ordered list of story events with chapter numbers.
-        f. Chapter-by-chapter beat sheet: chapter number, title, one-sentence
-           premise, and entry/exit states for each major character.
+        ```ts
+        type StoryBible = {
+          genre: string;
+          tone: string;
+          setting: {
+            timePeriod: string;
+            locations: string[];
+            worldRules: string[];
+          };
+          characters: Array<{
+            id: string;
+            name: string;
+            role: "protagonist" | "antagonist" | "supporting";
+            status: "alive" | "dead" | "unknown";
+            description: string;
+          }>;
+          foreshadowing: Array<{
+            id: string;
+            description: string;
+            status: "open" | "paidOff" | "deferred";
+            deferredToChapter?: number;
+          }>;
+          timeline: Array<{
+            chapterNumber: number;
+            event: string;
+          }>;
+          beatSheet: Array<{
+            chapterNumber: number;
+            title: string;
+            premise: string;
+            characterStates: Record<
+              string,
+              "alive" | "dead" | "unknown"
+            >;
+          }>;
+        };
+        ```
 
-REQ-07: The story bible SHALL be editable by the user in the native macOS UI before
-        chapter drafting begins.
+        The setting SHALL record a time period, locations, and world rules, with
+        each world rule represented as one paragraph. The character roster SHALL
+        record each character's name, role, initial status (alive for a new
+        character), and one-sentence description. The foreshadowing list SHALL
+        identify each planted element and its status. `deferred` entries SHALL
+        include `deferredToChapter`; a silently dropped item is invalid. The
+        beat sheet SHALL contain one entry for each demo chapter and SHALL record
+        a character state for each major character by ID. Successive chapter
+        entries make the entry/exit transition explicit without changing the
+        `characterStates` map shape.
 
-REQ-08: The exact plot and character names for the demo are NOT fixed in this spec
-        (TBD at demo time). The schema above is mandatory; the content is TBD.
+REQ-07: The story bible SHALL be editable by the user in the Web UI before
+        chapter drafting begins. Agents SHALL receive a validated snapshot of the
+        current bible as read-only context.
+
+REQ-08: The exact plot, character names, and sample passage for the demo are NOT
+        fixed in this specification. They remain TBD at demo time, while the
+        schema in REQ-06 is mandatory.
 
 ### 2.4 Four-agent relay pipeline
 
-REQ-09: Chapters SHALL be produced one at a time through a relay of four Kiro Crew
-        agents in the following fixed order:
+REQ-09: Chapters SHALL be produced one at a time through four server-side agents
+        in this fixed order:
 
-        1. outline agent   — produces a structured beat outline for the chapter.
-        2. style agent     — rewrites or produces prose matching the style profile.
-        3. continuation agent — extends or polishes the prose into a complete draft.
-        4. continuity agent   — audits the draft against the story bible and either
-                                APPROVES or returns a VETO with specific fixes.
+        1. outline agent — produces a structured beat outline for the chapter.
+        2. style agent — writes or rewrites prose to match the style profile.
+        3. continuation agent — extends or polishes the prose into a complete
+           chapter draft.
+        4. continuity agent — audits the draft against the story bible and either
+           APPROVES or returns a VETO with specific fixes.
 
-REQ-10: If the continuity agent vetoes a draft, the pipeline SHALL loop back to the
-        outline agent (or the continuation agent, at the user's option) with the
-        veto notes appended as additional context, and retry. The loop SHALL be
-        capped at 3 retries per chapter.
+        The definitions are the existing files in `/.kiro/agents/outline.md`,
+        `style.md`, `continuation.md`, and `continuity.md`. The server SHALL load
+        and call those definitions through an OpenAI-compatible interface. Their
+        contents SHALL NOT be changed for this migration.
 
-REQ-11: Every agent in the relay SHALL receive as context:
-        - the style profile,
-        - the full story bible,
-        - all previously accepted chapter texts (read-only),
-        - the outputs of the earlier agents in the current chapter's relay pass.
+REQ-10: If the continuity agent vetoes a draft, the server pipeline SHALL loop
+        back to the outline agent, or to the continuation agent when the user has
+        selected that retry option, with the veto notes appended as context. A
+        continuation retry SHALL reuse the valid outline and style outputs from
+        the vetoed pass; if either is missing or invalid, it SHALL restart at
+        outline. The first execution is not a retry. Each chapter SHALL have at
+        most 3 retries after that first execution. A fourth failed pass SHALL end the chapter
+        with a surfaced error rather than start another retry.
 
-REQ-12: Agents SHALL NOT have write access to the story bible. Only the user may
-        edit it.
+REQ-11: Every agent in the relay SHALL receive the following read-only context:
+        - the style profile;
+        - the full story bible snapshot;
+        - all previously accepted chapter texts, read-only;
+        - outputs from earlier agents in the current chapter relay pass; and
+        - veto notes when the pass is a retry.
 
-### 2.5 Continuity hook checks
+REQ-12: Agents SHALL NOT have write access to the story bible. Only the user edit
+        flow may replace the active client-side bible, and each pipeline pass uses
+        a snapshot of it.
 
-REQ-13: The continuity hook SHALL run after every continuation agent draft, before
-        the chapter is accepted. It SHALL check:
+### 2.5 Continuity checks
 
-        a. Character alive/dead: no character who died in a prior accepted chapter
-           appears as a speaking or acting participant in the new draft unless the
-           story bible explicitly permits it (e.g., flashback, ghost).
-        b. Timeline order: every event referenced in the draft is consistent with
-           the timeline in the story bible; no effect precedes its cause.
-        c. Foreshadowing payoff: every foreshadowing entry that was "open" in the
-           previous chapter is either still open, paid off in this chapter, or
-           explicitly deferred (new "deferred-to-chapter" field set). It MUST NOT
-           simply disappear.
+REQ-13: The base continuity check contract in `/.kiro/hooks/continuity-check.md`
+        SHALL be applied after every continuation draft and before a chapter is
+        accepted. Without modifying that file, the server-side continuity stage
+        SHALL enforce the following complete contract:
 
-REQ-14: On a continuity failure, the hook SHALL return:
-        - the specific failing items (not a full chapter rewrite),
-        - the story bible fields that the items violate,
-        - a minimal suggested fix for each item.
+        a. Character alive/dead: a character who died in a prior accepted chapter
+           SHALL NOT appear as a speaking or acting participant in the new draft
+           unless the story bible explicitly permits a flashback, memory, ghost,
+           or equivalent exception.
+        b. Timeline order: every event referenced in the draft SHALL be consistent
+           with the ordered story bible timeline; no effect may precede its cause.
+        c. Foreshadowing payoff: every foreshadowing entry that was `open` after
+           the previous accepted chapter SHALL remain explicitly open, become
+           `paidOff`, or become `deferred` with `deferredToChapter` set. It SHALL
+           NOT silently disappear. By chapter 3, an open item SHALL be paid off.
 
-REQ-15: The hook result SHALL be displayed in the native macOS UI alongside the
-        draft so the user can review before triggering a retry.
+REQ-14: On a continuity failure, the check SHALL return specific failing items,
+        the story bible fields violated by those items, and a minimal suggested
+        fix for each item. It SHALL NOT replace the full chapter automatically.
+        A successful check SHALL return `APPROVED`; a failed check SHALL return
+        `VETO` with structured failure data.
 
-### 2.6 Native macOS UI
+REQ-15: The continuity result SHALL be streamed to and displayed in the Web UI
+        alongside the beat outline and draft so the user can review the result
+        before requesting a retry.
 
-REQ-16: The app SHALL have the following screens / panels:
-        a. Sample input — paste or open a .txt file, trigger style analysis.
-        b. Style profile — display computed metrics; read-only.
-        c. Story bible editor — display and allow editing of all story bible fields.
-        d. Chapter workspace — show per-chapter: beat outline, prose draft, and
-           continuity check result. Allow the user to approve or request a retry.
-        e. Final story — render all accepted chapters in sequence; export to .txt.
+### 2.6 Web UI and downloads
 
-REQ-17: The app SHALL run entirely on the local machine; no external API calls to
-        third-party services SHALL be made at runtime.
+REQ-16: The app SHALL provide these browser views or panels:
 
-REQ-18: The demo scope is exactly 3 chapters. The app SHALL enforce this limit.
+        a. Sample input — paste or import a `.txt` file and trigger style
+           analysis.
+        b. Style profile — display all eight computed metrics and their
+           definitions as read-only data.
+        c. Story bible editor — display and edit every field in the REQ-06 schema.
+        d. Chapter workspace — show the per-chapter beat outline, prose draft,
+           streamed agent progress, and continuity result. Allow approval or a
+           retry request.
+        e. Final story — render all three accepted chapters in sequence.
 
-### 2.7 Non-functional requirements
+        The interface SHALL use React components styled with Tailwind CSS 4 and
+        accessible shadcn/ui primitives. The story bible SHALL be downloadable
+        as JSON. Each accepted chapter and the complete story SHALL be
+        downloadable as Markdown files.
 
-REQ-19: The full pipeline (sample analysis + 3 chapters, no retries) SHALL complete
-        within 3 minutes on a developer Mac, measured end-to-end.
+REQ-17: The browser SHALL call the server only through Next.js App Router Route
+        Handlers. The server SHALL call the configured OpenAI-compatible model
+        endpoint; no model key or credential may be sent to the browser.
+        Pipeline progress and agent output SHALL stream to the browser with
+        Server-Sent Events (SSE).
 
-REQ-20: The app SHALL target macOS 14 (Sonoma) or later and SHALL be buildable with
-        `swift build` or Xcode without additional toolchain installation.
+### 2.7 Runtime, scope, and security
 
-REQ-21: All Kiro configuration (agents, hooks, specs, steering) SHALL live under
-        `/.kiro` at the repo root and SHALL NOT be gitignored.
+REQ-18: The demo scope SHALL be exactly 3 chapters. The application SHALL reject
+        or disable any request for a fourth chapter.
 
-REQ-22: No generated story chapter SHALL exceed 800 words. This is not a
-        million-word generator.
+REQ-19: The full flow, including sample analysis and all 3 chapters with no
+        retries, SHALL complete within 3 minutes in the intended deployment
+        environment.
 
-## 3. Constraints and Out-of-Scope
+REQ-20: No generated chapter SHALL exceed 800 words. The server SHALL validate
+        this limit before accepting a chapter.
 
+REQ-21: Active session data SHALL live in React state and be restored from
+        `localStorage`. The session SHALL include a derived continuity ledger
+        beside accepted chapters so later checks can use the last accepted
+        character and foreshadowing states. The ledger is not a story bible
+        mutation. The application SHALL not use a database or a server-side
+        story store. The server SHALL receive the style profile, story bible,
+        accepted chapters, and ledger in validated request/session payloads rather
+        than rely on a long-lived in-memory session.
+
+REQ-22: The server SHALL read model configuration only from the environment
+        variables `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL`. These values,
+        especially the key, SHALL never be committed, placed in client code,
+        logged, put in prompts, or included in downloaded files. No real API key
+        or password SHALL appear in this repository.
+
+REQ-23: All Kiro configuration SHALL remain under `/.kiro` at the repository root
+        and SHALL NOT be gitignored. This document migration SHALL NOT modify
+        `/.kiro/agents/` or `/.kiro/hooks/`.
+
+## 3. Constraints and Out of Scope
+
+- The four-agent order is fixed: outline -> style -> continuation -> continuity.
 - No crawling of commercial novel sites or any third-party text source.
-- No use of copyrighted text as sample input (enforced by terms, not code).
-- No browser or web UI; native macOS delivery only.
-- No persistent user accounts or server-side storage across sessions.
-- Long-form generation (novellas, full novels) is out of scope.
-- The demo plot and character names are TBD and SHALL NOT be hardcoded in the spec.
+- No use of copyrighted text as sample input.
+- No persistent user accounts, database, or server-side story storage across
+  sessions.
+- Long-form generation beyond the exactly 3-chapter demo is out of scope.
+- The demo plot, character names, and sample passage are TBD and SHALL NOT be
+  hardcoded in this specification.
+- The intended local command is `pnpm dev`. The intended deployment path is a
+  GitHub-connected automatic deployment to Vercel; Devpost receives the public
+  deployed URL.
