@@ -112,6 +112,55 @@ frames, ending theme), numbers stations, satellite communications.
 
 **第 3 章（葵视角）——告别。** 葵回到《星坠》本身。她一帧一帧重看片尾曲，忽然听出来：旋律里藏着哥哥的笔迹——那是最后一把钥匙。谜题从来不是一个问题，而是允许她停下寻找的许可。三人重新聚到一起，用那座死去电台的频率播出解除码。倒计时停下的那一刻，卫星没有坠落，信号也没有消失——它变成了一场告别：三个陌生人隔着三个国家，在同一频率上，第一次真正听见了彼此。
 
+## Character viewpoint synopses (Snowflake Step 5, optional, draft — 2026-11-07, pending owner approval)
+
+Each retells the same story from one character's eyes, in third-person
+limited. These are planning notes, not prose — the continuation agent writes
+the chapters.
+
+### Dawn Lin's viewpoint
+
+Dawn has spent years telling himself the shortwave bands are not dead, just
+unlistened-to. When he catches the signal, his first instinct is to solve it
+alone — that is what a cryptographer does. The forum thread ruins that plan:
+a stranger in Japan hears a storyboard in his recording, a stranger in America
+recognises the modulation, and suddenly the puzzle belongs to three people.
+Dawn's story is about learning that a code is not a lock to pick. When the
+station goes dark and the team splits, he is the one who insists they
+broadcast instead of decode — the answer is not in the signal, it is in the
+reply. He presses transmit on a dead station's frequency, and for the first
+time his theory is not a paper: three people hear each other at the same
+moment.
+
+### Aoi Hoshino's viewpoint
+
+Aoi has spent two years drawing other people's worlds because her brother's
+world stopped. When Dawn's recording matches a "Starfall" storyboard, she
+thinks it is coincidence — then the rhythm matches again, and again, and the
+coincidence starts to feel like an address. Her story is about realising the
+trail was never a trail: her brother was not testing her, he was leaving her a
+way to stop. The midpoint hurts the most — the sender is not a government, it
+is him, and every clue she chases brings her closer to losing the search
+itself. In the final chapter she stops looking for him and starts listening to
+him: the ending theme holds his handwriting in the melody. She finds the key
+not by solving the puzzle, but by accepting that the puzzle was permission to
+say goodbye — and she is the one who broadcasts the farewell.
+
+### Leo Carter's viewpoint
+
+Leo built things so signals would travel further, and he has spent years
+trying to outrun one thing he built. When he traces the modulation to his own
+satellite, his first instinct is procedure: report it, hand over the
+coordinates, let the authorities handle it. That is the whole point of a
+system — someone qualified decides. His story is about discovering that the
+system is the problem: the authorities would file the signal away as a threat,
+and the only people who understand it are two strangers on a forum. The
+midpoint forces the choice — report or stay — and he stays. In the final
+chapter he does the one thing no procedure would ever authorise: he switches
+off his own satellite, with his own hand, on a dead station's frequency, next
+to two ordinary people. Redemption, he learns, is not taking back what you
+built. It is switching it off yourself.
+
 ## Point of view (confirmed 2026-11-07)
 
 Third-person limited, rotating one focal character per chapter:
