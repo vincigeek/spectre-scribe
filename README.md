@@ -5,8 +5,10 @@ Spectre Scribe is a Next.js 15 full-stack Web app in which four server-side agen
 - Main track: Frankenstein (combining things that do not normally go together)
 - Also aiming at: Best Kiro Crew App, Best Demo
 - Form: a browser-based Web app, not a million-word generator
+- Languages: English and Chinese; the story language follows the sample
 - Demo scope: one short science-fiction story with exactly 3 chapters
-- Pipeline: style statistics from a sample -> editable story bible -> four-agent relay -> continuity checks
+- Pipeline: style statistics from a sample -> story bible (drafted from a seed, then edited) -> four-agent relay -> continuity checks
+- Live mode needs a demo access code and is rate limited; anyone can watch a recorded replay
 - Inspiration only: the earlier OCNovel project. No code is copied from it; this repository is written fresh in the submission period.
 - Copyrighted material is not crawled, fetched, or used as sample text.
 - Demo plot, character names, and sample passage remain TBD and are not hardcoded in the specification.
@@ -22,14 +24,14 @@ Spectre Scribe is a Next.js 15 full-stack Web app in which four server-side agen
 - React state plus `localStorage` for session data; no database
 - Server-Sent Events (SSE) for pipeline progress and streamed agent output
 
-The frontend and backend live in this repository. The server reads the four unchanged agent definitions from `/.kiro/agents/` and calls them through an OpenAI-compatible interface. The base continuity contract remains in `/.kiro/hooks/continuity-check.md`; server-side validation adds the demo's structured result and retry rules.
+The frontend and backend live in this repository. The server reads the four agent definitions from `/.kiro/agents/` as read-only files and calls them through an OpenAI-compatible interface. The base continuity contract remains in `/.kiro/hooks/continuity-check.md`; server-side validation adds the demo's structured result and retry rules.
 
 ## How Kiro was used
 
 - `/.kiro/steering/` : product, technology, and repository structure guidance
 - `/.kiro/specs/spectre-scribe/` : requirements, design, and implementation tasks
-- `/.kiro/agents/` : the four Crew agents (outline, style, continuation, continuity); their contents are not changed
-- `/.kiro/hooks/` : continuity checks for character status, timeline order, and foreshadowing payoff; their contents are not changed
+- `/.kiro/agents/` : the four Crew agents (outline, style, continuation, continuity); the app never modifies them
+- `/.kiro/hooks/` : continuity checks for character status, timeline order, and foreshadowing payoff; the app never modifies them
 
 The `.kiro` directory is at the repository root and must not be added to `.gitignore`.
 
@@ -40,9 +42,9 @@ pnpm install
 pnpm dev
 ```
 
-Configure `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL` in the deployment environment or in a local environment file that is excluded from version control. The values are read only by server-side Route Handlers. No real key or password belongs in this repository, the browser bundle, or the documentation.
+Configure `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, and optionally `LLM_MODEL_PREMIUM` (used only by the continuity agent) in the deployment environment or in a local environment file that is excluded from version control. Live mode in Production also needs `DEMO_ACCESS_CODE`, `RATE_LIMIT_SECRET`, `UPSTASH_REDIS_REST_URL`, and `UPSTASH_REDIS_REST_TOKEN`; without them the deployed site runs replay only. The values are read only by server-side Route Handlers. No real key or password belongs in this repository, the browser bundle, or the documentation.
 
-The sample must contain at least 200 words and must be the user's own writing or public-domain text. Style analysis is performed by the pure TypeScript function behind the style-analysis Route Handler, without external text retrieval or an LLM call. The pipeline sends the style profile, story bible, prior accepted chapters, and current relay outputs to the configured model service. A chapter is at most 800 words; after the first attempt, each chapter may have at most 3 retries. The demo accepts exactly 3 chapters.
+The sample must contain at least 200 words (English) or 400 字 (Chinese) and must be the user's own writing or public-domain text. Style analysis is performed by the pure TypeScript function behind the style-analysis Route Handler, without external text retrieval or an LLM call. The pipeline sends the style profile, story bible, prior accepted chapters, and current relay outputs to the configured model service. A chapter is at most 800 words (1,500 字 in Chinese); after the first attempt, each chapter may have at most 3 retries. The demo accepts exactly 3 chapters.
 
 The story bible can be downloaded as JSON. Accepted chapters and the complete story can be downloaded as Markdown files. Session state is restored from `localStorage`; the server does not persist story data.
 

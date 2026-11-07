@@ -26,6 +26,15 @@ stream.
 The style endpoint remains separate: `POST /api/style/analyse` validates the sample and
 returns JSON. It does not call a model and does not use SSE.
 
+The bible draft endpoint `POST /api/bible/draft` returns JSON, one layer per request, and
+does not use SSE (design §2.12).
+
+Both live endpoints (`/api/pipeline/stream` and `/api/bible/draft`) pass the live gate
+(design §2.13) before a stream starts. A refusal is a normal JSON response with HTTP 401,
+429, or 503 and a stable code (`access-required`, `rate-limited`, `live-unavailable`);
+429 carries `retryAfterSeconds` and a `Retry-After` header. The access code arrives in the
+`X-Demo-Access` header and is never logged.
+
 ## Runtime and Vercel limits
 
 - The pipeline Route Handler uses the Node.js runtime. It needs the complete Node API to

@@ -15,8 +15,8 @@ approved before the next one starts.
 
 ## Snowflake Lite: the compressed layer sequence
 
-The full method is designed for novels. This demo is exactly 3 chapters of at
-most 800 words each, so the sequence is compressed. Do not restore the steps
+The full method is designed for novels. This demo is exactly 3 chapters, each within
+the chapter limit (800 words, or 1,500 字 in Chinese), so the sequence is compressed. Do not restore the steps
 that were cut without an owner decision.
 
 ### Step 0: Style profile (project-specific, before the Snowflake starts)
@@ -29,7 +29,7 @@ measured style is a failed layer.
 
 ### Step 1: Logline
 
-One sentence, at most 15 words, no character names. It states the core story:
+One sentence, at most 15 words (30 字 in Chinese), no character names. It states the core story:
 who wants what, against what, at what stake. If it needs a name to make sense,
 it is not finished yet.
 
@@ -82,11 +82,27 @@ deletion.
 
 ### Step 7: First draft
 
-The continuation agent writes the chapter draft from the beat list, at most
-800 words per chapter. It does not invent new plot turns, characters, or
+The continuation agent writes the chapter draft from the beat list, within
+the chapter limit. It does not invent new plot turns, characters, or
 foreshadowing beyond the approved beats. Anything the draft needs that is not
 in the beats goes back to Step 4 or Step 6 first; it is never smuggled into
 the prose.
+
+## How the app runs the layers (decided 2026-11-07)
+
+The layers run in two places:
+
+| Where | Snowflake steps | Calls | User approval |
+| --- | --- | --- | --- |
+| Plan mode, layer `core` | 1 logline, 2 paragraph, 3 characters | 1 | Yes, before `structure` |
+| Plan mode, layer `structure` | 4 synopsis, 6 scene list | 1 | Yes, before drafting |
+| Chapter mode, per chapter | beats from the scene list | 1 per chapter pass | No; continuity judges |
+| Continuation | 7 draft | 1 per chapter pass | Via VETO review |
+
+The one-page synopsis (Step 4) is stored as the three `beatSheet` premises, one
+paragraph per chapter, not as a separate field. Step 5 stays optional and is
+not generated. Rule 3 below applies per plan layer: two bounded calls, not one
+call for the whole stack.
 
 ## Rules that apply to every layer
 

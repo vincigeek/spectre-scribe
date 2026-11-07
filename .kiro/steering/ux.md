@@ -384,6 +384,35 @@ Loading controls communicate what is happening and remain cancellable where the 
 supports cancellation. Error messages avoid raw provider bodies, URLs with credentials,
 stack traces, prompts, and full request payloads.
 
+## Bible drafting, live mode, and replay
+
+- The Story Bible panel opens with two paths: `Draft from a seed` and `Fill in by hand`.
+  The seed form has genre, tone, idea (counter: 2 sentences max), and optional notes.
+- A draft layer shows beside the editor under a `DRAFT — not in your bible` label, with
+  `Accept`, `Edit then accept`, and `Redraft (N of 3 left)`. Accepting over user text asks
+  first and offers one undo.
+- Live controls show a small `LIVE` badge. Without a code, they show a code field and a
+  `Watch a recorded run` button. A refusal shows its plain message and the replay button,
+  never a raw status code alone.
+- Replay shows a fixed `REPLAY · recorded <date> · <models>` banner, speed controls (1x, 2x,
+  skip to end), and an `Exit replay` button. Edit controls are disabled during replay.
+
+## Language and CJK
+
+The app handles English and Chinese (`requirements.md` REQ-24 to REQ-29).
+
+- The wireframes in this file show English values. Wherever a wireframe shows `200 words` or
+  `15 words`, the UI shows the active language's threshold and unit, for example
+  `NNN / 400 字` and `NN / 30 字`. The counter uses `lib/text-units.ts`.
+- The Sample Input panel shows the detected language (`English` or `中文`) next to the counter,
+  with a switch to correct it before analysis.
+- The pixel display font is for Latin labels and numbers only. Prose, data values, and any
+  Chinese text use a font stack with a CJK-capable fallback (system sans or serif for `zh`).
+- UI chrome is available in English and Simplified Chinese (P1). The UI language is independent
+  of the story language. Both come from small string dictionaries, not an i18n framework.
+- A story bible written in a different language from the sample shows a non-blocking warning.
+- Downloads are UTF-8; file names stay ASCII.
+
 ## References checked 2026-11-07
 
 - [WAI: text descriptions for required-field errors](https://www.w3.org/WAI/WCAG22/Techniques/general/G83)
