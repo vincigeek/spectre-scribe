@@ -73,6 +73,8 @@ REQ-06: Before chapter drafting begins, the system SHALL create a story bible
         type StoryBible = {
           genre: string;
           tone: string;
+          logline: string; // Snowflake Step 1: one sentence, at most 15 words, no character names.
+          synopsis: string; // Snowflake Step 2: exactly five sentences (setup, disaster 1, midpoint, disaster 2, resolution).
           setting: {
             timePeriod: string;
             locations: string[];
@@ -84,6 +86,10 @@ REQ-06: Before chapter drafting begins, the system SHALL create a story bible
             role: "protagonist" | "antagonist" | "supporting";
             status: "alive" | "dead" | "unknown";
             description: string;
+            goal: string; // Snowflake Step 3: what the character wants.
+            motivation: string; // Snowflake Step 3: why the character wants it.
+            conflict: string; // Snowflake Step 3: what stands in the way.
+            epiphany: string; // Snowflake Step 3: what the character learns by the end.
           }>;
           foreshadowing: Array<{
             id: string;
@@ -108,9 +114,13 @@ REQ-06: Before chapter drafting begins, the system SHALL create a story bible
         ```
 
         The setting SHALL record a time period, locations, and world rules, with
-        each world rule represented as one paragraph. The character roster SHALL
+        each world rule represented as one paragraph. The bible SHALL record a
+        logline of at most 15 words with no character names and a five-sentence
+        synopsis (setup, disaster 1, midpoint, disaster 2, resolution), per the
+        Snowflake Method in `steering/snowflake.md`. The character roster SHALL
         record each character's name, role, initial status (alive for a new
-        character), and one-sentence description. The foreshadowing list SHALL
+        character), and one-sentence description, plus goal, motivation,
+        conflict, and epiphany. The foreshadowing list SHALL
         identify each planted element and its status. `deferred` entries SHALL
         include `deferredToChapter`; a silently dropped item is invalid. The
         beat sheet SHALL contain one entry for each demo chapter and SHALL record
