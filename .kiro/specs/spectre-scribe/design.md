@@ -42,48 +42,61 @@ the agents, not a vague prose instruction.
 ### 2.1 App Router and Route Handlers
 
 `app/page.tsx` renders the workspace shell and composes the client components.
-`app/layout.tsx` supplies the document shell and global Tailwind styles.
+`app/layout.tsx` supplies the document shell and global Tailwind styles. The project
+uses the pinned Next.js 15 App Router, React 19, TypeScript, Tailwind CSS 4, and
+Node.js 22.x as described by the steering files.
 
 `app/api/style/analyse/route.ts` accepts a validated `{ sampleText }` request,
 rejects empty or sub-200-word samples, calls the pure analyser, and returns a
-JSON `StyleProfile`. The route performs no model call.
+JSON `StyleProfile`. The route performs no model call and does not fetch sample
+text from another source.
 
-`app/api/pipeline/stream/route.ts` accepts a validated pipeline payload and returns
-an `text/event-stream` response. Its `ReadableStream` forwards server events from
-the orchestrator to the browser. The payload contains the chapter number, style
-profile, story bible snapshot, accepted chapters, current retry count, and any
-veto notes or prior relay outputs needed for a retry.
+`app/api/pipeline/stream/route.ts` is a Node.js Route Handler for
+`POST /api/pipeline/stream`. It validates a complete versioned request before
+starting work, sets the explicit stream headers, and returns a native
+`ReadableStream` containing the typed SSE events described in `api-streaming.md`.
+The payload contains the opaque `runId`, chapter number, style profile, story bible
+snapshot, accepted chapters, continuity ledger, retry count, restart point, and
+any valid relay checkpoints needed for a retry or best-effort transport resume.
 
-Both Route Handlers validate data at the trust boundary. They return structured
-client errors and do not depend on an in-memory session surviving another request.
+The initial route ceiling is `maxDuration = 120` seconds with an internal
+110-second deadline. The handler stops on client disconnect or deadline expiry,
+passes one combined `AbortSignal` to provider calls, and never caches a model
+request. Both Route Handlers validate data at the trust boundary and return
+structured client errors without depending on an in-memory session surviving
+another request.
 
 ### 2.2 Style analyser (`lib/style-analyser.ts`)
 
 The analyser is a pure TypeScript module. It accepts the user-supplied string,
-performs no network or file I/O, and returns a serialisable `StyleProfile`. A
-small validation wrapper rejects input shorter than 200 words before analysis.
+performs no network or file I/O, and returns a serialisable `StyleProfile` or a
+typed validation result. The Route Handler rejects input shorter than 200 words
+before analysis, while direct callers also receive a finite, non-throwing result.
 
 The profile keeps these eight fields and calculation rules:
 
 | Field | Computation |
 | --- | --- |
 | `sentenceLenMean` | Mean words per sentence, with `.`, `!`, and `?` as sentence boundaries |
-| `sentenceLenSD` | Standard deviation of the sentence word-count list |
-| `typeTokenRatio` | Unique normalized tokens divided by total normalized tokens; lowercase and remove punctuation |
-| `dialogueRatio` | Word tokens inside quotation marks divided by all word tokens |
+| `sentenceLenSD` | Population standard deviation of the sentence word-count list |
+| `typeTokenRatio` | Unique normalized tokens divided by total normalized tokens; lowercased with punctuation removed |
+| `dialogueRatio` | Word tokens inside paired straight or curly quotation marks divided by all word tokens |
 | `pacingMarkers` | Counts per 100 words for em-dashes, ellipses, and sentence-final `.`, `!`, `?` |
 | `paraLenMean` | Mean words per paragraph, splitting paragraphs on blank lines |
-| `paraLenSD` | Standard deviation of the paragraph word-count list |
-| `avgWordLen` | Mean characters per word after stopwords are excluded |
+| `paraLenSD` | Population standard deviation of the paragraph word-count list |
+| `avgWordLen` | Mean characters per word after the versioned local stopword set is excluded |
 
-`pacingMarkers` is one metric with three named subcounts. The analyser does not
-call an LLM and does not persist the sample. The style profile is held in React
-session state and is sent as a named input to the style agent on every relevant
-pipeline request.
+The token policy is shared by the minimum-word check and all calculations. It is
+Unicode-aware, uses locale-independent lowercasing, keeps apostrophes inside
+words from becoming dialogue delimiters, and does not reject non-English text.
+The stopword set is local and versioned; no language list or language detector is
+loaded at runtime. `pacingMarkers` is one metric with three named subcounts.
 
-A Vitest suite covers known sentence and paragraph counts, vocabulary ratio,
-no-dialogue and all-dialogue samples, pacing markers, stopword-excluded word
-length, and the 200-word validation boundary.
+The analyser does not call an LLM and does not persist the sample. The style
+profile is held in React session state and is sent as a named input to the style
+agent on every relevant pipeline request. Tests cover empty and short input,
+exactly 200 words, punctuation and quote edge cases, Unicode/non-English text,
+zero variance, and finite numeric output.
 
 ### 2.3 Story bible schema and editor (`lib/story-bible.ts`)
 
@@ -140,52 +153,72 @@ runtime data to `.kiro`.
 ### 2.4 Server pipeline and model client (`lib/pipeline/`)
 
 The pipeline is server-only. `AgentDefinitionLoader` reads the four existing
-Markdown definitions from `/.kiro/agents/` at runtime without editing them.
-`OpenAICompatibleClient` reads `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL` from
-server environment variables and sends the assembled prompt to the configured
-OpenAI-compatible interface. Missing configuration is a structured server error.
-The key is never returned in an event, prompt transcript, log, client bundle, or
-download.
+Markdown definitions from `/.kiro/agents/` at runtime without editing them. The
+files are immutable configuration; if a required file is missing or too stub-like
+to provide a usable role contract, the loader returns a safe configuration error
+rather than inventing a replacement.
+
+`OpenAICompatibleClient` is a small adapter around standard server-side `fetch`.
+It reads `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL` only from the server
+environment, normalizes the base URL in one place, sends the key only in the
+outbound authorization header, and maps provider failures to safe internal errors.
+It uses the Chat Completions-compatible request shape for arbitrary providers. A
+provider-specific token-limit field or equivalent Responses API request is
+translated inside this adapter, never in an agent wrapper. No provider response
+body, prompt, key, or credential-bearing URL is sent to the browser.
 
 `PipelineOrchestrator` assembles a bounded context for one chapter. Every relay
 pass uses the following order:
 
-1. **Outline agent** reads the style profile, story bible snapshot, and accepted
-   chapters, then produces a structured outline of at most eight beats. It does
-   not write final prose.
+1. **Outline agent** reads the named style profile, story bible snapshot, and
+   accepted chapters, then produces a strict structured outline of at most eight
+   beats. It does not write final prose.
 2. **Style agent** reads those inputs plus the outline and produces a style anchor
    of at most 400 words. It targets the named quantitative metrics and does not
    need to complete the chapter.
 3. **Continuation agent** reads all previous inputs plus the style anchor and
-   produces a complete chapter draft of at most 800 words.
+   produces a complete chapter draft of at most 800 words. Prose may be streamed
+   upstream, but the server retains and validates the complete text.
 4. **Continuity agent** reads all previous inputs plus the draft and returns
    `APPROVED` or `VETO` with structured failures. It does not rewrite the draft.
 
-Every agent receives the full story bible, the style profile, and previously
-accepted chapter texts as read-only context. Later agents also receive earlier
-outputs from the current pass. The server includes the previous VETO notes on a
-retry.
+Initial output caps are constants: outline 600 tokens, style 900, continuation
+1,600, and continuity 800. Strict JSON Schema is requested for outline and
+continuity when the configured provider supports it. The server still parses and
+validates every result, and treats refusal, incomplete output, invalid JSON, and
+schema mismatch as failures. A continuation result is never accepted from a
+partial delta.
 
-A single stream request can run one full relay pass. If the continuity result is
-`VETO`, the server emits the draft and failure details so the user can review
-them. A retry request carries `retryCount + 1`, the VETO notes, and the selected
-restart point. The default restart point is outline and runs the complete order.
-A continuation
-restart is a suffix retry: it MUST reuse the exact outline and style-anchor
-outputs from the vetoed pass, then run continuation and continuity in that order.
-If those outputs are absent or invalid, the server MUST fall back to an outline
-restart. A suffix retry does not reorder the relay. The server rejects a retry
-count greater than 3, so a chapter has one first attempt and at most three
-additional retries.
+Every agent receives the full story bible, named style profile, previously
+accepted chapter texts, and valid earlier outputs from the current pass as
+read-only context. The raw sample is not sent after local analysis. The server
+includes structured VETO notes only on a retry. Prompt values are delimited and
+bounded as untrusted user/model data.
 
-The server accepts a chapter only after `APPROVED` and a word-count check of at
-most 800 words. It then returns the accepted chapter to the browser, which adds
-it to React state and `localStorage`. The client stores a derived continuity ledger
-next to accepted chapters. The ledger records the last accepted character statuses
-and foreshadowing states used for the next check; it is session data, not a story
-bible mutation, and agents cannot write it. The server does not retain any of it
-for the next request; the browser sends accepted chapters and the ledger again as
-validated request context.
+A single stream request runs one chapter relay pass. If continuity returns
+`VETO`, the server emits the validated draft and failure details so the user can
+review them. A retry request carries `retryCount + 1`, the VETO notes, and the
+selected restart point. The default restart point is outline and runs the
+complete order. A continuation restart is a suffix retry: it reuses the exact
+validated outline and style-anchor outputs from the vetoed pass, then runs
+`continuation -> continuity`. Missing or invalid checkpoints force an outline
+restart. The server rejects a retry count greater than 3 before any model call.
+
+Each outbound provider call has an `AbortSignal` and a deadline. Only connection
+failures and statuses 408, 429, 500, 502, 503, and 504 may receive one bounded
+transport retry, subject to the route deadline and `Retry-After`. Authentication,
+permission, malformed-request, unsupported-schema, refusal, schema, and word-limit
+failures are terminal for that call. Transport retries are measured separately
+from user-visible chapter retries.
+
+The server accepts a chapter only after `APPROVED` and a server word-count check
+of at most 800 words. It then returns the accepted chapter to the browser, which
+adds it to React state and `localStorage`. The client stores a derived continuity
+ledger next to accepted chapters. The ledger records the last accepted character
+statuses and foreshadowing states used for the next check; it is session data,
+not a story bible mutation, and agents cannot write it. The server does not retain
+any of it for the next request; the browser sends accepted chapters and the ledger
+again as validated request context.
 
 ### 2.5 Continuity contract (`/.kiro/hooks/continuity-check.md`)
 
@@ -219,31 +252,95 @@ rewrites the prose.
 
 ### 2.6 SSE event protocol
 
-The stream uses standard SSE events with JSON data. The minimum event set is:
+The pipeline response is UTF-8 SSE over a POST request. The route returns
+`Content-Type: text/event-stream; charset=utf-8`, `Cache-Control: no-cache,
+no-transform`, and `X-Content-Type-Options: nosniff`. Each non-comment record
+contains a monotonically increasing `id`, one `event` name, one JSON `data:`
+line, and a blank line. The server emits `: keep-alive` comments at least every
+15 seconds while waiting for a provider response.
+
+The minimum event set is:
 
 ```text
+id: 1
+event: run-start
+data: {"runId":"...","chapterNumber":1,"retryCount":0}
+
+id: 2
 event: agent-start
-data: {"agent":"outline","chapter":1}
+data: {"runId":"...","agent":"outline","chapterNumber":1}
 
-event: agent-delta
-data: {"agent":"style","text":"..."}
-
+id: 3
 event: agent-complete
-data: {"agent":"continuation","output":"..."}
+data: {"runId":"...","agent":"outline","output":{...}}
+
+id: 4
+event: agent-delta
+data: {"runId":"...","agent":"continuation","text":"..."}
+
+id: 5
 event: continuity
-data: {"status":"VETO","failures":[...]}
+data: {"runId":"...","status":"VETO","failures":[...]}
+
+id: 6
 event: chapter-accepted
-data: {"chapterNumber":1,"wordCount":...}
+data: {"runId":"...","chapterNumber":1,"wordCount":...}
+
+id: 7
 event: error
-data: {"code":"...","message":"..."}
+data: {"runId":"...","code":"...","message":"...","retryable":false}
+
+id: 8
 event: done
-data: {"retryCount":0}
+data: {"runId":"...","status":"vetoed","nextAction":"retry"}
 ```
 
-The exact event payloads are typed shared data. Deltas are optional for agents
-that do not stream from the model, but the route must still send progress and a
-terminal `done` or `error` event. The client closes the fetch stream on terminal
-events and preserves the latest partial output for review.
+The exact payloads are typed shared data. `agent-delta` is optional for outline
+and continuity; structured calls may emit only `agent-complete`. A successful run
+ends with `done`. If the connection is still writable, an `error` event is followed
+by terminal `done`. The client accepts a chapter only from a validated
+`chapter-accepted` event, never from a delta or a continuity-looking string.
+
+The browser cannot use `EventSource` because this endpoint is POST and carries a
+JSON request body. A client component uses `fetch()` and a `ReadableStream`
+reader. Its parser handles arbitrary chunk boundaries, multiple `data:` lines,
+comments, unknown event names, malformed JSON, event IDs, and a final partial
+record. Unknown events are ignored; malformed application data produces a safe
+parser error without turning partial text into a checkpoint.
+
+Each complete `agent-complete`, `continuity`, and `chapter-accepted` event is a
+client checkpoint. The client stores the serialisable checkpoint in React state
+and the versioned session record. A checkpoint is an untrusted resume hint, not
+proof of server approval. The server validates the checkpoint shape and output
+schema again, deep-copies it, and never treats a client-supplied `APPROVED` value
+as sufficient to accept a chapter.
+
+The allowed suffixes are explicit: an outline checkpoint permits the
+style/continuation/continuity suffix, a style checkpoint permits the
+continuation/continuity suffix, and a continuation checkpoint permits a
+continuity rerun. A continuity checkpoint never bypasses the continuity rerun or
+the server word-count gate. If the accepted event may have been lost, the server
+reruns continuity and emits a new `chapter-accepted` only after both gates pass.
+`Last-Event-ID` may be sent as bookkeeping, but there is no server event log and
+no automatic replay claim.
+
+On a network drop, the client aborts the reader and preserves the latest complete
+checkpoint and accepted chapters. It offers one separate transport-recovery action:
+with a valid checkpoint it resends the same validated request and the remaining
+fixed-order suffix; without one it restarts the current pass at outline. Partial
+outline, style, prose, or continuity text is never accepted. If recovery fails,
+the UI shows an interrupted-run error and offers the normal outline or
+continuation retry rules. A transport recovery cannot bypass the three
+user-visible retries. If the server may have accepted a chapter before the client
+saw `chapter-accepted`, the client does not silently add it; statelessness requires
+a replay or explicit user retry.
+
+Before headers are sent, invalid requests return normal JSON errors with stable
+safe codes. After headers are sent, errors are typed SSE events and cannot change
+the HTTP status. Client aborts cancel upstream fetches and are shown as
+interrupted, not as provider failures. No event includes raw provider frames,
+full prompts, full request payloads, the raw sample, credentials, model
+configuration, or stack traces.
 
 ### 2.7 Web components and session state
 
@@ -264,11 +361,13 @@ object to `localStorage`. The session contains the style profile, bible, pending
 chapter result, accepted chapters, derived continuity ledger, retry count, and
 pipeline status. It contains no model secret.
 
-The chapter workspace shows a green `APPROVED` state or a red `VETO` state with
-failing items and suggested fixes. It disables a fourth chapter after chapter 3
-is accepted. A final-story download concatenates all three accepted chapters in
-order as Markdown; individual chapters use Markdown as well. The bible download
-uses JSON.
+The chapter workspace shows a text-labelled `APPROVED` state or a text-labelled
+`VETO` state with failing items and suggested fixes; color is supplementary only.
+It disables a fourth chapter after chapter 3 is accepted. A final-story download
+concatenates all three accepted chapters in order as Markdown; individual chapters
+use Markdown as well. The bible download uses JSON. Progress and terminal status
+use a polite status/live region without announcing every prose delta, and form
+errors identify their fields in text.
 
 ### 2.8 Data flow and boundaries
 
@@ -298,16 +397,37 @@ written to the server filesystem.
 
 ### 2.9 Deployment and performance
 
-Local development uses `pnpm dev`. A GitHub-connected Vercel project builds the
-same Next.js application on pushes to the configured branch. The intended
-submission is the public deployed URL, not a local address.
+Local development uses `pnpm dev` with the project-local Node 22.x runtime. A
+GitHub-connected Vercel project builds the same Next.js application on pushes to
+the configured branch. Non-production branches and pull requests receive preview
+deployments; the configured production branch (normally `main`) updates the
+production deployment. The intended submission is the public deployed URL, not a
+local address.
+
+The pipeline uses Vercel's Node.js runtime, not Edge. The initial route
+configuration is `maxDuration = 120` seconds with an internal 110-second deadline;
+stream time counts toward that function duration. Vercel's current Fluid Compute
+ceilings are higher than this initial setting, but the ceiling does not replace a
+product performance test. Configure Node 22.x in both `engines.node` and Vercel,
+then verify the deployed build and function versions.
+
+Set `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL` separately for Preview and
+Production. They are server-only variables without a `NEXT_PUBLIC_` prefix. Vercel
+environment changes apply to new deployments, so redeploy after changing them.
+No secret value is committed or printed.
 
 The performance target is the complete sample-analysis plus three-chapter flow
-with no retries in under 3 minutes. Instrumentation should measure each Route
-Handler request, each model call, and end-to-end browser time. The orchestrator
-must bound context to the required style profile, bible, accepted chapters, and
-current-pass outputs so a slow or oversized prompt does not bypass the chapter
-word limit.
+with no user-visible retries in under 3 minutes. Instrumentation measures each
+Route Handler request, each provider call, output size, transport-retry count,
+stream time, and browser end-to-end time. The orchestrator bounds context to the
+required style profile, bible, accepted chapters, and current-pass outputs so a
+slow or oversized prompt does not bypass the chapter word limit. If the measured
+path misses 180 seconds, reduce context, output budgets, or provider latency
+before changing any product invariant.
+
+Before implementation is considered complete, run the project-local type check,
+lint, Vitest suite, production build, and measured no-retry flow. The GitHub and
+Vercel connection is documented here but is not performed by this design migration.
 
 ## 3. Key design decisions
 
@@ -326,6 +446,21 @@ The browser provides an accessible editing and streaming workspace while Route
 Handlers keep model credentials and orchestration on the server. The App Router
 keeps the UI and backend contract close together, and SSE exposes progress without
 moving secrets into client code.
+
+**Why native `fetch` and Web Streams instead of a provider SDK?**
+The configured endpoint is arbitrary OpenAI-compatible infrastructure, while the
+browser contract is a project-specific typed SSE protocol. One server adapter can
+normalize endpoint construction, token caps, aborts, provider frames, and safe
+errors without putting a vendor SDK in every wrapper or forwarding a provider's
+wire format. Vercel's AI SDK remains an acceptable future implementation detail,
+but it must preserve this route contract and the server-only boundary.
+
+**Why best-effort checkpoint recovery instead of durable resume?**
+The product explicitly has no database, queue, or server-side story store. Complete
+agent outputs are safe client checkpoints, so a dropped stream can resume a
+remaining suffix or restart the current pass. Partial text and a possibly accepted
+chapter are not replayable without durable server state, so the UI must surface the
+ambiguity rather than claim idempotency.
 
 **Why React state and `localStorage`?**
 The demo is a single three-chapter session. A database would add account and
