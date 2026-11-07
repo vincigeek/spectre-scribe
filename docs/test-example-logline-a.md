@@ -23,14 +23,21 @@ Meeting mechanism (owner approved the assistant's recommendation): **A primary,
 B secondary** — the three meet on a ham radio forum (A); the signal hides a
 second layer that only the three of them together can open (B).
 
+Setting (owner chose option C on 2026-11-07): our world stays original — no
+Gundam names, no UC calendar, no Zeon/Federation. The pirated anime itself is
+a fictional mecha series called **"Starfall" (《星坠》)**, about a colony
+falling to Earth. Fiction within fiction: the anime's plot mirrors the real
+countdown, which is how the code hides in plain sight. Gundam is the
+inspiration, never the setting.
+
 1. **Setup → Chapter 1.** Lin Xiao posts his recording of a mysterious
    shortwave signal to a ham radio forum; Aoi recognises its rhythm in an old
    anime storyboard, and Leo traces its modulation to a satellite he helped
    build.
 2. **Disaster 1 → Chapter 2.** The three meet in the thread and crack the first
-   layer together — the signal's rhythm matches a pirated anime episode's
-   storyboard, and the next burst decodes into a countdown from a runaway
-   satellite.
+   layer together — the signal's rhythm matches the storyboard of "Starfall," a
+   pirated mecha anime about a colony falling to Earth, and the next burst
+   decodes into a countdown from a runaway satellite.
 3. **Midpoint (disaster 2 / reversal) → Chapter 2.** When the countdown's
    target turns out to be a satellite Leo helped build, he moves to hand the
    coordinates to the authorities — and the other two realise the signal's
@@ -38,7 +45,7 @@ second layer that only the three of them together can open (B).
 4. **Disaster 3 → end of Chapter 2 / Chapter 3.** With hours left, the station
    goes dark, the team splits, and the final layer — one that only the three of
    them together can open — refuses to decode.
-5. **Resolution → Chapter 3.** Aoi finds the final key in the anime's ending
+5. **Resolution → Chapter 3.** Aoi finds the final key in "Starfall"'s ending
    theme — her brother's handwriting in the melody — and the three broadcast
    the disarm code on the dead station's frequency, turning the countdown into
    a farewell.
@@ -46,10 +53,10 @@ second layer that only the three of them together can open (B).
 Chinese translation:
 
 1. 林晓把一段神秘短波信号的录音发到业余无线电论坛求助；葵认出它的节奏藏在一集旧动画的分镜里，利奥则追踪到它的调制方式来自一颗他参与建造的卫星。
-2. 三人在帖子里相遇，联手解开第一层——信号的节奏与一集盗播动画的分镜重合，下一段信号解出来，是一颗失控卫星的倒计时。
+2. 三人在帖子里相遇，联手解开第一层——信号的节奏与盗播机甲动画《星坠》（讲的是一座殖民卫星坠向地球）的分镜重合，下一段信号解出来，是一颗失控卫星的倒计时。
 3. 倒计时的目标竟是利奥参与建造的那颗卫星，他正要把坐标交给官方，另外两人却发现信号的发送者不是什么政府，而是葵失踪的哥哥。
 4. 只剩几小时时，电台陷入沉寂，团队分裂，而密码的最后一层——只有三人合力才能打开的一层——死活解不开。
-5. 葵在动画的片尾曲里找到了最后一把钥匙——旋律里是她哥哥的笔迹——三人用那座死去电台的频率播出解除码，把倒计时变成了一场告别。
+5. 葵在《星坠》的片尾曲里找到了最后一把钥匙——旋律里是她哥哥的笔迹——三人用那座死去电台的频率播出解除码，把倒计时变成了一场告别。
 
 ## Characters (Snowflake Step 3, DRAFT — names pending confirmation)
 
@@ -95,10 +102,11 @@ decision; a first-person sample would require a different passage.
 
 | ID | Description | Planted | Paid off |
 | --- | --- | --- | --- |
-| F1 | The signal's rhythm matches an old anime episode's storyboard | Ch 1 | Ch 3 |
+| F1 | The signal's rhythm matches a "Starfall" storyboard | Ch 1 | Ch 3 |
 | F2 | Aoi's missing brother authored the pirated anime | Ch 1 | Ch 3 |
 | F3 | Leo's past military satellite project | Ch 2 | Ch 3 |
 | F4 | The satellite countdown | Ch 2 | Ch 3 |
+| F5 | "Starfall"'s plot — a colony falling to Earth — mirrors the real countdown | Ch 1 | Ch 3 |
 
 ## Beat sheet sketch (example, at most 8 beats per chapter)
 
@@ -128,11 +136,11 @@ novel text as the sample.
   "genre": "science fiction",
   "tone": "hopeful, tense; third-person limited, rotating POV (Ch 1 Lin Xiao, Ch 2 Leo Carter, Ch 3 Aoi Hoshino)",
   "logline": "Three strangers decode a pirate anime broadcast to stop a satellite countdown.",
-  "synopsis": "Lin Xiao posts his recording of a mysterious shortwave signal to a ham radio forum; Aoi recognises its rhythm in an old anime storyboard, and Leo traces its modulation to a satellite he helped build. The three meet in the thread and crack the first layer together — the signal's rhythm matches a pirated anime episode's storyboard, and the next burst decodes into a countdown from a runaway satellite. When the countdown's target turns out to be a satellite Leo helped build, he moves to hand the coordinates to the authorities — and the other two realise the signal's sender is not a government, but Aoi's missing brother. With hours left, the station goes dark, the team splits, and the final layer — one that only the three of them together can open — refuses to decode. Aoi finds the final key in the anime's ending theme — her brother's handwriting in the melody — and the three broadcast the disarm code on the dead station's frequency, turning the countdown into a farewell.",
+  "synopsis": "Lin Xiao posts his recording of a mysterious shortwave signal to a ham radio forum; Aoi recognises its rhythm in an old anime storyboard, and Leo traces its modulation to a satellite he helped build. The three meet in the thread and crack the first layer together — the signal's rhythm matches the storyboard of \"Starfall,\" a pirated mecha anime about a colony falling to Earth, and the next burst decodes into a countdown from a runaway satellite. When the countdown's target turns out to be a satellite Leo helped build, he moves to hand the coordinates to the authorities — and the other two realise the signal's sender is not a government, but Aoi's missing brother. With hours left, the station goes dark, the team splits, and the final layer — one that only the three of them together can open — refuses to decode. Aoi finds the final key in \"Starfall\"'s ending theme — her brother's handwriting in the melody — and the three broadcast the disarm code on the dead station's frequency, turning the countdown into a farewell.",
   "setting": {
     "timePeriod": "near future",
     "locations": ["a shortwave radio shack", "an anime studio archive", "a satellite ground station"],
-    "worldRules": ["Shortwave signals can carry hidden data in their timing.", "The satellite obeys only a broadcast on its original frequency."]
+    "worldRules": ["Shortwave signals can carry hidden data in their timing.", "The satellite obeys only a broadcast on its original frequency.", "The in-story anime \"Starfall\" is a mecha series about a colony falling to Earth; its plot mirrors real events."]
   },
   "characters": [
     {"id": "lin-xiao", "name": "林晓", "role": "protagonist", "status": "alive", "description": "Cryptography graduate student and ham radio operator.", "goal": "Prove his shortwave theory.", "motivation": "He believes an old signal holds a real message.", "conflict": "Academia dismisses his methods.", "epiphany": "Codes are for hearing others."},
@@ -140,7 +148,8 @@ novel text as the sample.
     {"id": "leo-carter", "name": "Leo Carter", "role": "protagonist", "status": "alive", "description": "Satellite communications engineer.", "goal": "Redeem his military satellite project.", "motivation": "He helped build the satellite now counting down.", "conflict": "His instinct is to hand the signal to the authorities.", "epiphany": "Some signals can only be caught by ordinary people."}
   ],
   "foreshadowing": [
-    {"id": "F1", "description": "Signal rhythm matches an old anime storyboard.", "status": "open"},
+    {"id": "F1", "description": "Signal rhythm matches a \"Starfall\" storyboard.", "status": "open"},
+    {"id": "F5", "description": "\"Starfall\"'s plot mirrors the real countdown.", "status": "open"},
     {"id": "F2", "description": "Aoi's missing brother authored the pirated anime.", "status": "open"},
     {"id": "F3", "description": "Leo's past military satellite project.", "status": "open"},
     {"id": "F4", "description": "The satellite countdown.", "status": "open"}
