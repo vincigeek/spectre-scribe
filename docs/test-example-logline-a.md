@@ -30,7 +30,7 @@ falling to Earth. Fiction within fiction: the anime's plot mirrors the real
 countdown, which is how the code hides in plain sight. Gundam is the
 inspiration, never the setting.
 
-1. **Setup → Chapter 1.** Lin Xiao posts his recording of a mysterious
+1. **Setup → Chapter 1.** Dawn Lin posts his recording of a mysterious
    shortwave signal to a ham radio forum; Aoi recognises its rhythm in an old
    anime storyboard, and Leo traces its modulation to a satellite he helped
    build.
@@ -58,13 +58,18 @@ Chinese translation:
 4. 只剩几小时时，电台陷入沉寂，团队分裂，而密码的最后一层——只有三人合力才能打开的一层——死活解不开。
 5. 葵在《星坠》的片尾曲里找到了最后一把钥匙——旋律里是她哥哥的笔迹——三人用那座死去电台的频率播出解除码，把倒计时变成了一场告别。
 
-## Characters (Snowflake Step 3, DRAFT — names pending confirmation)
+## Characters (Snowflake Step 3 — names confirmed 2026-11-07)
+
+English names: **Dawn Lin** (林晓 — Chinese surname Lin + English given name
+Dawn, from 晓), **Aoi Hoshino** (星野葵), **Leo Carter** (利奥·卡特). Internal
+character ids (`lin-xiao`, etc.) are unchanged — the beat sheet references
+them.
 
 | Name | Role | Goal | Motivation | Conflict | Epiphany |
 | --- | --- | --- | --- | --- | --- |
-| 林晓 Lin Xiao (China) | Protagonist — cryptographer, ham radio operator | Prove his shortwave theory is not obsolete | He believes an old, dismissed signal holds a real message | Academia dismisses his unorthodox methods | A code is not meant to be cracked. It is meant to be answered. |
-| 星野葵 Aoi Hoshino (Japan) | Protagonist — anime illustrator / doujin author | Find her missing brother, the original author of the pirated anime | Her brother vanished leaving only the broadcast behind | She cannot tell whether his clues are a trail or a trap | The puzzle was never a question. It was permission to stop searching. |
-| 利奥·卡特 Leo Carter (USA) | Protagonist — satellite communications engineer | Redeem the military satellite project he worked on | He helped build the satellite now counting down | His first instinct is to hand the signal to the authorities | Redemption is not taking back what you built. It is switching it off yourself. |
+| Dawn Lin (林晓, China) | Protagonist — cryptographer, ham radio operator | Prove his shortwave theory is not obsolete | He believes an old, dismissed signal holds a real message | Academia dismisses his unorthodox methods | A code is not meant to be cracked. It is meant to be answered. |
+| Aoi Hoshino (星野葵, Japan) | Protagonist — anime illustrator / doujin author | Find her missing brother, the original author of the pirated anime | Her brother vanished leaving only the broadcast behind | She cannot tell whether his clues are a trail or a trap | The puzzle was never a question. It was permission to stop searching. |
+| Leo Carter (利奥·卡特, USA) | Protagonist — satellite communications engineer | Redeem the military satellite project he worked on | He helped build the satellite now counting down | His first instinct is to hand the signal to the authorities | Redemption is not taking back what you built. It is switching it off yourself. |
 
 All three start with status `alive`. International cast: China, Japan, USA.
 Pop-culture elements: shortwave / ham radio, anime (pirated broadcast, key
@@ -72,7 +77,7 @@ frames, ending theme), numbers stations, satellite communications.
 
 ### Character one-pagers (Snowflake Step 3, draft — 2026-11-07, pending owner approval)
 
-#### 林晓 Lin Xiao — Chapter 1 POV
+#### Dawn Lin (林晓) — Chapter 1 POV
 
 - **一句话：** 一位坚信短波没有过时的密码学研究生，在深夜的无线电噪音里捞到了一段不该存在的信号。
 - **目标 Goal：** 证明短波理论没有过时。
@@ -81,7 +86,7 @@ frames, ending theme), numbers stations, satellite communications.
 - **顿悟 Epiphany：** A code is not meant to be cracked. It is meant to be answered.（密码不是用来破解的，是用来回答的。）
 - **一段梗概：** 林晓的弧线从“一个人听”开始，到“三个人一起播”结束。第一章，他把录音发上论坛求助，没想到回帖的两个人一个认出了节奏、一个认出了调制方式——他的理论第一次有人接住。第二章，他和两人联手解开第一层，倒计时现身；他主张继续解下去，哪怕目标指向利奥造过的卫星。第三章，电台沉寂、团队分裂，他坚持用死去电台的频率播出解除码：短波的价值不是发表论文，而是让三个人在同一时刻听见彼此。
 
-#### 星野葵 Aoi Hoshino — Chapter 3 POV
+#### Aoi Hoshino (星野葵) — Chapter 3 POV
 
 - **一句话：** 一位画同人图的插画师，在一集旧动画的分镜里认出了失踪哥哥的笔迹。
 - **目标 Goal：** 找到失踪的哥哥——《星坠》的原作者。
@@ -90,7 +95,7 @@ frames, ending theme), numbers stations, satellite communications.
 - **顿悟 Epiphany：** The puzzle was never a question. It was permission to stop searching.（谜题从来不是一个问题，而是允许她停下寻找的许可。）
 - **一段梗概：** 葵的弧线是一次迟到的告别。第一章，她在林晓的录音里听出《星坠》分镜的节奏，以为只是巧合。第二章，她和利奥同时意识到信号的发送者不是政府，而是她失踪的哥哥——谜题突然有了体温。第三章，她在《星坠》的片尾曲里找到最后一把钥匙：旋律里藏着哥哥的笔迹。那一刻她明白，谜题从来不是一个问题，而是允许她停下寻找的许可；她亲手按下播出键，把倒计时变成一场告别。
 
-#### 利奥·卡特 Leo Carter — Chapter 2 POV
+#### Leo Carter (利奥·卡特) — Chapter 2 POV
 
 - **一句话：** 一位参与过军事卫星项目的卫星通信工程师，想把坐标交给官方，却发现只有普通人能接住这段信号。
 - **目标 Goal：** 赎回自己参与过的军事卫星项目。
@@ -111,7 +116,7 @@ frames, ending theme), numbers stations, satellite communications.
 
 Third-person limited, rotating one focal character per chapter:
 
-- Chapter 1 — Lin Xiao (forum, signal)
+- Chapter 1 — Dawn Lin (forum, signal)
 - Chapter 2 — Leo Carter (satellite, trust breaks)
 - Chapter 3 — Aoi Hoshino (ending theme, farewell)
 
@@ -147,7 +152,7 @@ decision; a first-person sample would require a different passage.
 
 ## Beat sheet sketch (example, at most 8 beats per chapter)
 
-- **Chapter 1 (setup-hook):** (1) Lin Xiao posts the signal recording to a ham
+- **Chapter 1 (setup-hook):** (1) Dawn Lin posts the signal recording to a ham
   radio forum; (2) Aoi spots the storyboard match in his spectrogram;
   (3) Leo traces the modulation to a satellite he helped build; (4) the three
   meet in the thread and agree to work together — hook: the signal repeats on
@@ -171,18 +176,18 @@ novel text as the sample.
 ```json
 {
   "genre": "science fiction",
-  "tone": "hopeful, tense; third-person limited, rotating POV (Ch 1 Lin Xiao, Ch 2 Leo Carter, Ch 3 Aoi Hoshino)",
+  "tone": "hopeful, tense; third-person limited, rotating POV (Ch 1 Dawn Lin, Ch 2 Leo Carter, Ch 3 Aoi Hoshino)",
   "logline": "Three strangers decode a pirate anime broadcast to stop a satellite countdown.",
-  "synopsis": "Lin Xiao posts his recording of a mysterious shortwave signal to a ham radio forum; Aoi recognises its rhythm in an old anime storyboard, and Leo traces its modulation to a satellite he helped build. The three meet in the thread and crack the first layer together — the signal's rhythm matches the storyboard of \"Starfall,\" a pirated mecha anime about a colony falling to Earth, and the next burst decodes into a countdown from a runaway satellite. When the countdown's target turns out to be a satellite Leo helped build, he moves to hand the coordinates to the authorities — and the other two realise the signal's sender is not a government, but Aoi's missing brother. With hours left, the station goes dark, the team splits, and the final layer — one that only the three of them together can open — refuses to decode. Aoi finds the final key in \"Starfall\"'s ending theme — her brother's handwriting in the melody — and the three broadcast the disarm code on the dead station's frequency, turning the countdown into a farewell.",
+  "synopsis": "Dawn Lin posts his recording of a mysterious shortwave signal to a ham radio forum; Aoi recognises its rhythm in an old anime storyboard, and Leo traces its modulation to a satellite he helped build. The three meet in the thread and crack the first layer together — the signal's rhythm matches the storyboard of \"Starfall,\" a pirated mecha anime about a colony falling to Earth, and the next burst decodes into a countdown from a runaway satellite. When the countdown's target turns out to be a satellite Leo helped build, he moves to hand the coordinates to the authorities — and the other two realise the signal's sender is not a government, but Aoi's missing brother. With hours left, the station goes dark, the team splits, and the final layer — one that only the three of them together can open — refuses to decode. Aoi finds the final key in \"Starfall\"'s ending theme — her brother's handwriting in the melody — and the three broadcast the disarm code on the dead station's frequency, turning the countdown into a farewell.",
   "setting": {
     "timePeriod": "near future",
     "locations": ["a shortwave radio shack", "an anime studio archive", "a satellite ground station"],
     "worldRules": ["Shortwave signals can carry hidden data in their timing.", "The satellite obeys only a broadcast on its original frequency.", "The in-story anime \"Starfall\" is a mecha series about a colony falling to Earth; its plot mirrors real events."]
   },
   "characters": [
-    {"id": "lin-xiao", "name": "林晓", "role": "protagonist", "status": "alive", "description": "Cryptography graduate student and ham radio operator.", "goal": "Prove his shortwave theory.", "motivation": "He believes an old signal holds a real message.", "conflict": "Academia dismisses his methods.", "epiphany": "A code is not meant to be cracked. It is meant to be answered."},
-    {"id": "aoi-hoshino", "name": "星野葵", "role": "protagonist", "status": "alive", "description": "Anime illustrator and doujin author.", "goal": "Find her missing brother.", "motivation": "Her brother left only the broadcast behind.", "conflict": "She cannot tell trail from trap.", "epiphany": "The puzzle was never a question. It was permission to stop searching."},
-    {"id": "leo-carter", "name": "Leo Carter", "role": "protagonist", "status": "alive", "description": "Satellite communications engineer.", "goal": "Redeem his military satellite project.", "motivation": "He helped build the satellite now counting down.", "conflict": "His instinct is to hand the signal to the authorities.", "epiphany": "Redemption is not taking back what you built. It is switching it off yourself."}
+    {"id": "lin-xiao", "name": "Dawn Lin (林晓)", "role": "protagonist", "status": "alive", "description": "Cryptography graduate student and ham radio operator.", "goal": "Prove his shortwave theory.", "motivation": "He believes an old signal holds a real message.", "conflict": "Academia dismisses his methods.", "epiphany": "A code is not meant to be cracked. It is meant to be answered."},
+    {"id": "aoi-hoshino", "name": "Aoi Hoshino (星野葵)", "role": "protagonist", "status": "alive", "description": "Anime illustrator and doujin author.", "goal": "Find her missing brother.", "motivation": "Her brother left only the broadcast behind.", "conflict": "She cannot tell trail from trap.", "epiphany": "The puzzle was never a question. It was permission to stop searching."},
+    {"id": "leo-carter", "name": "Leo Carter (利奥·卡特)", "role": "protagonist", "status": "alive", "description": "Satellite communications engineer.", "goal": "Redeem his military satellite project.", "motivation": "He helped build the satellite now counting down.", "conflict": "His instinct is to hand the signal to the authorities.", "epiphany": "Redemption is not taking back what you built. It is switching it off yourself."}
   ],
   "foreshadowing": [
     {"id": "F1", "description": "Signal rhythm matches a \"Starfall\" storyboard.", "status": "open"},
