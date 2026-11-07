@@ -109,6 +109,8 @@ type CharacterStatus = "alive" | "dead" | "unknown";
 type StoryBible = {
   genre: string;
   tone: string;
+  logline: string; // Snowflake Step 1: one sentence, at most 15 words, no character names.
+  synopsis: string; // Snowflake Step 2: exactly five sentences (setup, disaster 1, midpoint, disaster 2, resolution).
   setting: {
     timePeriod: string;
     locations: string[];
@@ -120,6 +122,10 @@ type StoryBible = {
     role: "protagonist" | "antagonist" | "supporting";
     status: CharacterStatus;
     description: string;
+    goal: string; // Snowflake Step 3: what the character wants.
+    motivation: string; // Snowflake Step 3: why the character wants it.
+    conflict: string; // Snowflake Step 3: what stands in the way.
+    epiphany: string; // Snowflake Step 3: what the character learns by the end.
   }>;
   foreshadowing: Array<{
     id: string;
@@ -141,7 +147,8 @@ type StoryBible = {
 ```
 
 A new character starts with `status: "alive"`. The editor supports all fields,
-including repeatable locations, world rules, characters, foreshadowing entries,
+including logline, five-sentence synopsis, repeatable locations, world rules,
+characters (with goal, motivation, conflict, and epiphany), foreshadowing entries,
 timeline events, and the three chapter beat entries. `deferred` foreshadowing
 requires `deferredToChapter`; an open item may not silently become dropped.
 
@@ -172,7 +179,12 @@ pass uses the following order:
 
 1. **Outline agent** reads the named style profile, story bible snapshot, and
    accepted chapters, then produces a strict structured outline of at most eight
-   beats. It does not write final prose.
+   beats. It does not write final prose. It expands the plan in Snowflake layers
+   (see `steering/snowflake.md`): logline, then five-sentence paragraph, then
+   one-page synopsis, then the beat list that becomes the `beatSheet`. Each
+   layer is a separate bounded outline call, approved by the user before the
+   next layer starts, and a later layer must not contradict an earlier one.
+   The original Snowflake Step 6 (four-page synopsis) is cut for this demo.
 2. **Style agent** reads those inputs plus the outline and produces a style anchor
    of at most 400 words. It targets the named quantitative metrics and does not
    need to complete the chapter.
