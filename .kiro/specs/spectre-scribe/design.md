@@ -471,6 +471,129 @@ Before implementation is considered complete, run the project-local type check,
 lint, Vitest suite, production build, and measured no-retry flow. The GitHub and
 Vercel connection is documented here but is not performed by this design migration.
 
+### 2.10 Entities and data dictionary
+
+This section is the single consolidated reference for every data shape in the
+system. `StoryBible` and `StyleProfile` are defined in §2.3 and §2.2 and are
+referenced here, not redefined. All other entities are defined here. There is
+no database: entities live in React state, `localStorage`, SSE payloads, or
+downloads, as the "Lives in" column states. No entity carries a secret.
+
+| Entity | Lives in | Defined in |
+| --- | --- | --- |
+| `Sample` | Client memory only (transient) | Below |
+| `StyleProfile` | React state, session, pipeline request | §2.2 |
+| `StoryBible` | React state, session, pipeline request, JSON download | §2.3 |
+| `AcceptedChapter` | React state, session, Markdown download | Below |
+| `RelayReceipt` | SSE event, React state, session | Below (§2.6 event shape) |
+| `ContinuityResult` | SSE event, React state, session | Below |
+| `PipelineRun` | Server memory for one request; mirrored in React state | Below |
+| `Session` | `localStorage` (versioned), React state | Below (§2.7) |
+| `ErrorCode` | SSE `error` event, UI message | Below |
+
+```ts
+// The user's pasted or imported text. Never persisted, never logged, never
+// sent to the model after local analysis (see §2.2).
+type Sample = {
+  text: string;
+  wordCount: number; // Deterministic local count.
+  meetsThreshold: boolean; // wordCount >= 200.
+};
+
+// One accepted chapter. Only a chapter that arrived via a validated
+// `chapter-accepted` event becomes an AcceptedChapter; exactly three exist
+// in a complete session, in chapter order.
+type AcceptedChapter = {
+  chapterNumber: 1 | 2 | 3;
+  title: string; // User/model-provided chapter title.
+  prose: string; // Full chapter text, at most 800 words by server count.
+  wordCount: number; // Server-side word count, authoritative.
+  relayReceipt: RelayReceipt; // The receipt of the pass that produced it.
+};
+
+// Emitted once per completed pass, approved or vetoed, before `done` (§2.6).
+type RelayReceipt = {
+  runId: string;
+  chapterNumber: number;
+  retryCount: number; // 0 on the first attempt, up to 3.
+  steps: Array<{
+    agent: "outline" | "style" | "continuation" | "continuity";
+    summary: string; // One sentence: what this agent did.
+    changes: string[]; // Concrete changes (beats, anchor, draft, verdict).
+  }>;
+  foreshadowingTransitions: Array<{
+    id: string;
+    from: "open" | "paidOff" | "deferred";
+    to: "open" | "paidOff" | "deferred";
+  }>;
+  continuity: ContinuityResult;
+};
+
+// The continuity agent's verdict. A VETO never rewrites the draft; it lists
+// what failed so the user can choose the retry point (§2.4, §2.7).
+type ContinuityResult = {
+  status: "APPROVED" | "VETO";
+  failures: Array<{
+    checkId: "A" | "B" | "C" | "ARC"; // A life/death, B timeline, C foreshadowing, ARC arc role.
+    bibleField: string; // The violated StoryBible field, e.g. "characters[0].status".
+    message: string; // Plain-language description of the failure.
+    fix: string; // Minimal suggested fix; the user applies it, the server does not.
+  }>;
+};
+
+// One chapter relay pass. The server holds it for a single stream request;
+// the client mirrors its status for the chapter workspace UI.
+type PipelineRun = {
+  runId: string;
+  chapterNumber: 1 | 2 | 3;
+  retryCount: number; // 0..3; the server rejects a retry count above 3.
+  currentAgent: "outline" | "style" | "continuation" | "continuity" | null;
+  status: "running" | "approved" | "vetoed" | "interrupted" | "failed";
+  nextAction: "retry" | "next-chapter" | "edit-bible" | "new-session" | null;
+};
+
+// The versioned, serialisable client session (§2.7). It contains no provider
+// configuration, authorization headers, raw diagnostic errors, or secrets.
+// The continuity ledger is derived session data (last accepted character
+// statuses and foreshadowing states), not a story bible mutation.
+type Session = {
+  version: number;
+  styleProfile: StyleProfile | null;
+  bible: StoryBible;
+  acceptedChapters: AcceptedChapter[]; // At most 3, in chapter order.
+  continuityLedger: {
+    characterStatuses: Record<string, CharacterStatus>;
+    foreshadowing: Record<string, "open" | "paidOff" | "deferred">;
+  };
+  retryCounters: Record<number, number>; // chapterNumber -> retries used.
+  pipelineStatus: "idle" | "running" | "awaiting-retry" | "complete";
+};
+```
+
+**Error codes.** Every `error` event carries one stable code; the UI shows the
+code's plain-language message, never a raw provider body. `retryable` tells the
+client whether a retry control may be offered.
+
+| Code | Meaning | Retryable |
+| --- | --- | --- |
+| `config-missing` | Server provider configuration or an agent definition file is missing/unusable | No |
+| `provider-auth` | Authentication or permission failure at the provider | No |
+| `provider-rate-limited` | Provider returned 429 (one bounded transport retry may already have been used) | No (transport-level only) |
+| `provider-unavailable` | Provider returned 408/500/502/503/504 after the bounded transport retry | Yes, as a new run |
+| `bad-request` | Malformed request payload or failed validation | No |
+| `schema-mismatch` | Model output failed JSON/schema validation | Yes, as a chapter retry |
+| `model-refusal` | Model refused the request | Yes, as a chapter retry |
+| `word-limit` | Draft exceeded the 800-word server limit | Yes, as a chapter retry |
+| `retry-exhausted` | Chapter retry cap (3) reached | No; edit or start a new session |
+| `interrupted` | Stream aborted or stale run after reload | Yes, as resume/retry |
+
+Validation rules that cross entities: a `StoryBible` with an empty required
+field blocks drafting; a `deferred` foreshadowing entry requires
+`deferredToChapter`; an `AcceptedChapter` is only created from a validated
+`chapter-accepted` event; a `PipelineRun` with `retryCount > 3` is rejected
+before any model call; a `Session` with an unsupported version is discarded
+with a visible explanation (§2.7).
+
 ## 3. Key design decisions
 
 **Why four agents instead of one?**
