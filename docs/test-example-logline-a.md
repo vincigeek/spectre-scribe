@@ -63,6 +63,18 @@ All three start with status `alive`. International cast: China, Japan, USA.
 Pop-culture elements: shortwave / ham radio, anime (pirated broadcast, key
 frames, ending theme), numbers stations, satellite communications.
 
+## Point of view (confirmed 2026-11-07)
+
+Third-person limited, rotating one focal character per chapter:
+
+- Chapter 1 — Lin Xiao (forum, signal)
+- Chapter 2 — Leo Carter (satellite, trust breaks)
+- Chapter 3 — Aoi Hoshino (ending theme, farewell)
+
+Recorded in the story bible's `tone` field so all four agents follow it. The
+sample passage (Forster, *The Machine Stops*, third person) matches this
+decision; a first-person sample would require a different passage.
+
 ## Chapter arc (P0 structural roles)
 
 - **Chapter 1 — setup + hook.** The three each intercept the same mysterious
@@ -114,7 +126,7 @@ novel text as the sample.
 ```json
 {
   "genre": "science fiction",
-  "tone": "hopeful, tense",
+  "tone": "hopeful, tense; third-person limited, rotating POV (Ch 1 Lin Xiao, Ch 2 Leo Carter, Ch 3 Aoi Hoshino)",
   "logline": "Three strangers decode a pirate anime broadcast to stop a satellite countdown.",
   "synopsis": "Lin Xiao posts his recording of a mysterious shortwave signal to a ham radio forum; Aoi recognises its rhythm in an old anime storyboard, and Leo traces its modulation to a satellite he helped build. The three meet in the thread and crack the first layer together — the signal's rhythm matches a pirated anime episode's storyboard, and the next burst decodes into a countdown from a runaway satellite. When the countdown's target turns out to be a satellite Leo helped build, he moves to hand the coordinates to the authorities — and the other two realise the signal's sender is not a government, but Aoi's missing brother. With hours left, the station goes dark, the team splits, and the final layer — one that only the three of them together can open — refuses to decode. Aoi finds the final key in the anime's ending theme — her brother's handwriting in the melody — and the three broadcast the disarm code on the dead station's frequency, turning the countdown into a farewell.",
   "setting": {
