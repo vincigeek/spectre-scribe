@@ -243,11 +243,12 @@ must not be edited.
 
 ## Phase 8 — Kiro configuration verification
 
-- [ ] **T-29** Confirm that the four files in `/.kiro/agents/` are present and
+- [x] **T-29** Confirm that the four files in `/.kiro/agents/` are present and
       inspect whether each contains its required role prompt and output contract.
-      The application must load them without modifying their contents. If a
-      pre-existing file is a stub, record that as a configuration blocker for the
-      implementation; do not edit it in this migration.
+      The application must load them without modifying their contents. Completed
+      2026-11-07 on the owner's instruction: the four 4-line placeholders were
+      replaced with full role prompts and output contracts (outline, style,
+      continuation, continuity). The hook file was not changed.
       *(REQ-09, REQ-23)*
 
 - [ ] **T-30** Confirm that `/.kiro/hooks/continuity-check.md` is present and
@@ -276,4 +277,4 @@ must not be edited.
 | AC-12 | React state and `localStorage` restore the session without a database | T-04, T-22, T-27 |
 | AC-13 | No real key or password is in the repository or browser bundle | T-05, T-17, T-26, T-28 |
 | AC-14 | The demo plot, character names, and sample remain TBD in the specification | T-10, T-23, T-27 |
-| AC-15 | The existing agent and hook definitions remain unchanged and `.kiro` is not gitignored | T-13, T-18, T-29, T-30 |
+| AC-15 | The four agent definitions carry full role prompts and output contracts (completed 2026-11-07; the hook definition is unchanged) and `.kiro` is not gitignored | T-13, T-18, T-29, T-30 |
