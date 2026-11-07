@@ -32,6 +32,210 @@ caught, decoded, and re-broadcast.
   pixel font at its smallest used size; the pixel treatment must not make any
   control harder to hit or read.
 
+## Page layouts (added 2026-11-07)
+
+One scrolling workspace, five sections in order, one visible section header
+each. Desktop is a centred column (`max-width` ~1100px) unless a section says
+two-pane. Breakpoints: mobile <640px single column, stacked; tablet
+640–1024px single column with wider cards; desktop >1024px two-pane where
+specified. Pixel font is used for section numbers, panel labels, and agent
+names only, never for body copy. Each layout below is sketched in
+plain ASCII first, then specified in prose.
+
+### Global shell
+
+```
++--------------------------------------------------------------+
+| SPECTRE SCRIBE  *                        Saved locally [Reset]|
++--------------------------------------------------------------+
+| [1 SAMPLE v] -- [2 STYLE v] -- [3 BIBLE *] -- [4 CHAPTERS] -- |
+| [5 FINAL]                                                    |
++--------------------------------------------------------------+
+```
+
+- **Header (sticky):** left — wordmark `SPECTRE SCRIBE` in pixel font with a
+  small blinking signal dot; right — session status (`Saved locally` /
+  `Restored` / `New session`) and a `Reset session` button. No navigation
+  links; the workspace is the whole app.
+- **Stepper:** directly under the header, five numbered steps (Sample,
+  Style, Bible, Chapters 1–3, Final) with states `done` / `current` /
+  `locked`. Steps are labels, not links — the user scrolls, the stepper
+  reflects progress. Current step is text + icon, never colour alone.
+- **Footer:** one line — sample stays local, no account, no server storage —
+  plus the Kiroween demo note. Nothing else.
+
+### 1. Sample input
+
+```
++-- 01 / SAMPLE ------------------------------------------------+
+| Paste your own writing or public-domain text (min 200 words).|
+| +----------------------------------------------------------+ |
+| |                                                          | |
+| |   (textarea, monospace, min-height 240px)                | |
+| |                                                          | |
+| +----------------------------------------------------------+ |
+| [Import .txt]        132 / 200 words        [Analyse style] |
+| Sample is analysed locally and never sent to the model.      |
++--------------------------------------------------------------+
+```
+
+- **Section header:** `01 / SAMPLE` + one line: paste your own writing or
+  public-domain text, at least 200 words.
+- **Body (single column):** labelled textarea, minimum height ~240px,
+  monospace, with a character/word counter that updates as the user types.
+- **Control row (below the textarea, left to right):** `Import .txt` button
+  (file input, labelled) · live word count `NNN / 200 words` · primary
+  `Analyse style` button, disabled until the count reaches 200.
+- **Helper text:** directly under the controls — what counts as an allowed
+  sample, and that the text is analysed locally and never sent to the model.
+- **Error state:** inline error under the textarea naming the problem
+  (`Sample is 132 words — 68 more needed`) and the fix; the user's text is
+  preserved.
+
+### 2. Style profile
+
+```
++-- 02 / STYLE PROFILE -----------------------------------------+
+| +-----------+ +-----------+ +-----------+ +-----------+     |
+| | SENTENCE  | | WORD      | | DIALOGUE  | | PACING    |     |
+| | LENGTH    | | VARIETY   | | RATIO     | | --  ..  . |     |
+| | 18.2 wds  | | 0.71      | | 34%       | | 12 / 3 / 8|     |
+| +-----------+ +-----------+ +-----------+ +-----------+     |
+| +-----------+ +-----------+ +-----------+ +-----------+     |
+| | ...       | | ...       | | ...       | | ...       |     |
+| +-----------+ +-----------+ +-----------+ +-----------+     |
++--------------------------------------------------------------+
+```
+
+- **Section header:** `02 / STYLE PROFILE` + one line: what the sample
+  measures, in numbers — not a quality judgement.
+- **Metric grid (desktop 4 columns × 2 rows; tablet 2 columns; mobile 1):**
+  eight cards, one per metric. Each card: metric name (pixel label), large
+  monospace value, one-line definition from `requirements.md`.
+- **Pacing card** spans two columns on desktop and shows its three subcounts
+  (em-dash, ellipsis, sentence-final punctuation) as a small list.
+- **Availability rule:** once computed, the profile stays visible while the
+  user edits the bible — on desktop as a collapsed summary strip pinned above
+  the bible editor (`8 metrics · avg sentence NN words · …` + `Expand`);
+  on mobile as a collapsed details block at the top of the bible section.
+
+### 3. Story bible editor
+
+```
++-- 03 / STORY BIBLE -------------------------------------------+
+| [!] 3 errors -- logline over 15 words ... (summary on top)   |
+| +-- Basics -------------------------------------------------+ |
+| | Genre [______]  Tone [______________________]             | |
+| | Logline [______________________________]  12 / 15 words  | |
+| | Synopsis (5 sentences) [_______________]  5 / 5           | |
+| +----------------------------------------------------------+ |
+| +-- Setting ------------------------------------------------+ |
+| | Time [______]  Locations [+ Add]  World rules [+ Add]     | |
+| +----------------------------------------------------------+ |
+| +-- Characters ---------------------------------------------+ |
+| | [ Dawn Lin .......... ] [ Aoi Hoshino ....... ] [+ Add]   | |
+| +----------------------------------------------------------+ |
+| +-- Foreshadowing -- Timeline -- Beat sheet (Ch 1 / 2 / 3) -+ |
++--------------------------------------------------------------+
+| [Validate bible]  [Download JSON]  [Start chapter 1 relay]   |
++--------------------------------------------------------------+
+```
+
+- **Section header:** `03 / STORY BIBLE` + one line: fill every required
+  field; empty fields block drafting, nothing is pre-filled.
+- **Form (single column, grouped fieldsets in order):**
+  1. `Basics` — genre, tone, logline (with live `NN / 15 words` count),
+     five-sentence synopsis (with live sentence count `N / 5`).
+  2. `Setting` — time period, locations (repeatable rows), world rules
+     (repeatable rows).
+  3. `Characters` — one card per character: name, role (select), status
+     (select), description, goal, motivation, conflict, epiphany; `Add
+     character` / `Remove` buttons with accessible names; character ids are
+     shown read-only.
+  4. `Foreshadowing` — table-like rows: id (read-only), description, status
+     (select), deferred-to-chapter (appears only when status is `deferred`).
+  5. `Timeline` — repeatable rows: chapter number + event.
+  6. `Beat sheet` — three fixed chapter cards (1, 2, 3): title, premise,
+     per-character status selects.
+- **Validation:** field errors inline under the field; a summary box at the
+  top of the section lists all errors with links that move focus to the
+  field. Validating runs locally on edit and again on the server before a
+  relay starts.
+- **Sticky action bar (bottom of the section):** `Validate bible` ·
+  `Download JSON` (only for a validated/saved state) · primary `Start
+  chapter 1 relay`, disabled until the bible validates.
+
+### 4. Chapter workspace
+
+```
++-- 04 / CHAPTERS ----------------------------------------------+
+| Chapter 1 of 3 - The Signal   [APPROVED v]   attempt 1 of 4  |
+| [outline v] -> [style v] -> [continuation v] -> [continuity v]|
+| +-------------------------------+--------------------------+ |
+| | PROSE (serif, streaming)      | RELAY RAIL (mono)        | |
+| |                               | outline: beats set ...   | |
+| | Dawn Lin posts the signal...  | style: anchor 320w ...   | |
+| |                               | continuation: draft ...  | |
+| |                               | continuity: APPROVED     | |
+| | 742 words (server)            | F1 open -> paidOff       | |
+| +-------------------------------+--------------------------+ |
+| [Retry from outline] [Retry from continuation] [Next chapter] |
++--------------------------------------------------------------+
+```
+
+- **Section header:** `04 / CHAPTERS` + the current chapter's title once an
+  outline exists.
+- **Chapter header row:** `Chapter N of 3` · title (or `Untitled chapter`) ·
+  status badge (text + icon: `WAITING` / `RUNNING` / `APPROVED` / `VETO`) ·
+  `attempt N of 4`.
+- **Agent progress strip:** four chips in relay order
+  (`outline → style → continuation → continuity`), each showing `pending` /
+  `running` / `done` / `failed` as text + shape. The running chip names the
+  current agent and a one-line progress description.
+- **Body (desktop two-pane, 60/40; mobile stacked):**
+  - **Left — prose pane:** the draft in serif, streaming as it arrives; a
+    blinking cursor while running; server word count under the prose once
+    complete. A VETO does not hide the draft — it stays visible with the
+    failure panel beside it.
+  - **Right — relay rail:** the relay receipt for the latest pass (one entry
+    per agent: what it did, what it changed) plus every foreshadowing status
+    transition in that pass; shown for approved and vetoed passes alike.
+- **VETO panel (full width, under the panes when present):** one row per
+  failing check — check id, the violated bible field, plain-language
+  message, minimal suggested fix.
+- **Control row:** `Retry from outline` · `Retry from continuation` (only
+  when that checkpoint is valid, otherwise disabled with a reason) ·
+  `Next chapter` (only after `APPROVED`). All three disabled while a run is
+  active. No automatic rewrite ever starts from a VETO.
+
+### 5. Final story
+
+```
++-- 05 / FINAL STORY -------------------------------------------+
+| Three strangers decode a pirate anime broadcast...            |
+| Total: 2,214 words                                            |
+| +-- Chapter 1 - The Signal - 742 words ---------------------+ |
+| | (prose)                                                    | |
+| | [v] Relay receipt -- Chapter 1 (collapsed)                 | |
+| +----------------------------------------------------------+ |
+| +-- Chapter 2 - The Countdown - 781 words ------------------+ |
+| +-- Chapter 3 - The Last Broadcast - 691 words -------------+ |
+| [Ch1 .md] [Ch2 .md] [Ch3 .md] [Full story .md] [Bible .json] |
++--------------------------------------------------------------+
+```
+
+- **Section header:** `05 / FINAL STORY` + total word count across the three
+  accepted chapters.
+- **Body:** the three accepted chapters in order. Each chapter block: title,
+  server word count, prose in serif, and a collapsible relay receipt
+  (`Relay receipt — Chapter N`, collapsed by default).
+- **Download row:** `Download chapter 1 (.md)` · `Download chapter 2 (.md)` ·
+  `Download chapter 3 (.md)` · `Download full story (.md)` · `Download
+  story bible (.json)`.
+- **Incomplete state:** if a chapter is missing, that chapter's slot shows
+  `Chapter N — not yet accepted` with a `Go to chapter N` action instead of
+  invented text.
+
 ## Workspace flow
 
 The primary flow is sequential, but completed sections remain reviewable:
