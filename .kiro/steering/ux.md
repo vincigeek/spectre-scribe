@@ -3,6 +3,35 @@
 This document defines the user journey, state transitions, accessibility behavior, and
 failure presentation. It does not add product scope or fictional demo content.
 
+## Visual style (confirmed 2026-11-07)
+
+Dark "signal console" theme with a pixel-art treatment, chosen to make the
+product's subject visible: a late-night radio room where a broadcast is being
+caught, decoded, and re-broadcast.
+
+- **Base:** dark background, like a radio operator's room at night. Light
+  mode is not required.
+- **Accent:** phosphor green as the primary signal colour (spectrum,
+  waveforms, live states); warm amber as the secondary highlight (warnings,
+  the relay in progress). Exact hex values live as Tailwind 4 tokens in
+  `globals.css` at implementation time, not in this document.
+- **Pixel treatment:** chunky pixel corners and stepped borders on panels and
+  buttons, pixel-style dividers, a blinking text cursor in the chapter
+  workspace, and a pixel display font for short labels, section headings, and
+  agent names. Pixel font is display-only: body prose, bible fields, and
+  error messages always use a readable sans/serif face, never the pixel font.
+- **Tech texture:** faint grid or scanline background, monospace for signal
+  data (frequencies, word counts, attempt numbers, relay receipts), serif for
+  generated prose — machine parts look like a machine, story parts look like
+  a story.
+- **Motion:** relay progress and streaming text animate subtly; all animation
+  stops under reduced-motion preferences and nothing is communicated by motion
+  alone.
+- **Constraints that still bind:** status is never colour alone (text + icon
+  or shape, per Accessibility requirements below); contrast must hold for the
+  pixel font at its smallest used size; the pixel treatment must not make any
+  control harder to hit or read.
+
 ## Workspace flow
 
 The primary flow is sequential, but completed sections remain reviewable:
