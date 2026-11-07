@@ -138,6 +138,94 @@ headers, provider responses with secrets, or diagnostic stack traces in it. Do n
 samples or generated chapters by default. The server receives explicit validated context on
 each request and must work correctly on a cold Vercel invocation.
 
+## Functional boundaries
+
+What the product does and does not do. Anything not listed under "Can do"
+is out of scope unless the owner explicitly adds it. This section is the
+authority when a feature request conflicts with it.
+
+### Can do
+
+- **Analyse a sample.** Paste or import a `.txt` sample of the user's own
+  writing or public-domain text (at least 200 words) and compute exactly the
+  eight deterministic style metrics. Analysis is local and uses no LLM.
+- **Show the style profile.** Display all eight metrics with their definitions
+  as read-only values while the user edits the bible and reviews chapters.
+- **Edit a story bible.** Edit every field of the shared schema: logline,
+  five-sentence synopsis, genre, tone, setting, characters (with goal,
+  motivation, conflict, epiphany), foreshadowing, timeline, and one beat entry
+  per chapter. The bible starts empty/TBD; only the user fills it.
+- **Plan in Snowflake layers.** Expand the plan layer by layer (logline ->
+  paragraph -> one-page synopsis -> beat list), each layer approved before the
+  next starts, with no later layer contradicting an earlier one.
+- **Run the four-agent relay.** Draft exactly 3 chapters, one at a time, in
+  the fixed order `outline -> style -> continuation -> continuity`, streamed
+  over SSE with visible progress. Each chapter is at most 800 words.
+- **Check continuity.** Enforce the three checks (character alive/dead,
+  timeline order, foreshadowing payoff) plus the chapter arc roles, before any
+  chapter is accepted. A `VETO` names the failing check, the violated bible
+  field, and a minimal fix; it never rewrites the chapter.
+- **Retry within limits.** One first attempt plus at most 3 user-visible
+  retries per chapter, restarting at `outline` or at `continuation` when a
+  valid checkpoint exists.
+- **Show the relay receipt.** Every pass produces a human-readable receipt:
+  what each agent did or changed, what continuity blocked or fixed, and every
+  foreshadowing status transition in that pass, for approved and vetoed passes
+  alike.
+- **Restore the session.** Keep the active session in React state and restore
+  it from `localStorage` after a reload, without a database or an account.
+- **Download the work.** Story bible as JSON; each accepted chapter and the
+  complete three-chapter story as Markdown. The browser creates the files.
+- **Deploy on Vercel.** GitHub-connected deployment; the submitted artifact is
+  the public deployed URL.
+
+### Cannot do
+
+- **No accounts, billing, or server storage.** No sign-up, login, user
+  accounts, authentication, billing, database, queue, background job, or
+  server-side story store. There is nothing to log into and no story is kept
+  on the server after a request ends.
+- **No text retrieval.** No crawling, fetching, or recommending of commercial
+  novel text or any third-party literary text. The sample comes only from the
+  user. The raw sample is not sent to model calls after local analysis and is
+  not stored on the server.
+- **No long-form writing.** No more than 3 chapters, no chapter over 800
+  words, no fourth chapter, no series, no multi-book bible, no novel-length
+  manuscript.
+- **No open-ended assistant.** No general chatbot, no free-form writing
+  companion, no brainstorming chat, no editing of arbitrary user text outside
+  the relay. The four agents only do their one relay job, in the fixed order;
+  no agent may be added, removed, reordered, or allowed to accept its own
+  output.
+- **No automatic rewrite after a veto.** A vetoed draft is never silently
+  rewritten. The user reviews the failure and chooses a permitted retry point.
+- **No invented content.** No fabricated plot, character, location, sample
+  passage, or story title in specifications, defaults, or empty states. Empty
+  fields stay empty until the user fills them.
+- **No model choice in the UI.** The model is server configuration
+  (`LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`) only. The UI offers no model
+  picker, no bring-your-own-key field, and no provider switching.
+- **No media generation.** No image, audio, or video generation. No
+  translation, no summarisation of other books, no plagiarism checking.
+- **No collaboration.** No multi-user editing, comments, sharing links, or
+  publishing. One browser session, one story.
+- **No quality guarantee.** The eight metrics describe the sample
+  quantitatively; they do not prove literary quality and do not guarantee the
+  generated prose will match the sample's style. The 3-minute no-retry target
+  is a performance target in the intended deployment environment, not a
+  guarantee on every network.
+
+### Explicitly deferred (not in this submission)
+
+Decided by the owner on 2026-11-07, recorded here so a later request does not
+silently revive them:
+
+- a human approval checkpoint with single-agent rerun between chapters
+  (beyond the existing accept/retry flow);
+- tunable style sliders mapping to metric targets;
+- a foreshadowing / character-state wall;
+- two draft versions per chapter for the user to choose between.
+
 ## Scope and non-goals
 
 In scope:
