@@ -38,6 +38,18 @@ These rules are product constraints, not suggestions:
   its target chapter, and an open item must be paid off by chapter 3.
 - The demo accepts exactly 3 chapters. A chapter is accepted only after a continuity
   `APPROVED` result and a server-side word count of at most 800 words.
+- Chapter arc roles are structural, not plot content (the plot, names, and sample
+  remain TBD). Chapter 1 establishes the protagonist's goal and conflict, plants at
+  least one open foreshadowing item, and ends on a hook or question. Chapter 2
+  escalates with the midpoint disaster or reversal, advances or plants foreshadowing,
+  and ends on raised stakes. Chapter 3 pays off every open foreshadowing item,
+  resolves the logline, and shows the protagonist's epiphany. A reader who finishes
+  in 3 minutes must be able to say what the hook was and how it paid off.
+- Every chapter pass produces a human-readable relay receipt (see `design.md`
+  section 2.6): what each of the four agents did or changed, what continuity
+  blocked or fixed, and every foreshadowing status transition in that pass. The
+  receipt is shown for approved and vetoed passes alike; the relay is never a
+  black box.
 - A chapter has one first attempt and at most 3 user-visible retries. A fourth retry is a
   terminal error, not an implicit extra model call.
 - The complete no-retry flow, including analysis and all 3 chapters, must finish within 3
