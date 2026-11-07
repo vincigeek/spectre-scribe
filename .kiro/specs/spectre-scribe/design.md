@@ -262,6 +262,17 @@ A VETO event contains the failing check ID, the violating story bible field, the
 specific violation, and a minimal suggested fix. The continuity stage never
 rewrites the prose.
 
+**Chapter arc roles (P0)**
+
+The outline agent tags each chapter with its arc role, and the beat sheet must
+carry it: Chapter 1 is setup plus hook, Chapter 2 is escalation, Chapter 3 is
+payoff. Continuity enforces the mechanical parts: after Chapter 1 at least one
+foreshadowing item must be `open`, and after Chapter 3 every foreshadowing item
+must be `paidOff` (Check C). The Chapter 2 escalation (a disaster or reversal
+beat) is enforced at outline validation: the Chapter 2 beats must contain at
+least one beat whose premise is a disaster or reversal. These are structural
+roles; they do not invent plot, names, or sample content, which remain TBD.
+
 ### 2.6 SSE event protocol
 
 The pipeline response is UTF-8 SSE over a POST request. The route returns
@@ -299,10 +310,14 @@ event: chapter-accepted
 data: {"runId":"...","chapterNumber":1,"wordCount":...}
 
 id: 7
+event: relay-receipt
+data: {"runId":"...","chapterNumber":1,"retryCount":0,"steps":[{"agent":"outline","summary":"...","changes":["..."]},{"agent":"style","summary":"...","changes":["..."]},{"agent":"continuation","summary":"...","changes":["..."]},{"agent":"continuity","summary":"...","changes":["..."]}],"foreshadowingTransitions":[{"id":"...","from":"open","to":"paidOff"}],"continuity":{"status":"APPROVED","failures":[]}}
+
+id: 8
 event: error
 data: {"runId":"...","code":"...","message":"...","retryable":false}
 
-id: 8
+id: 9
 event: done
 data: {"runId":"...","status":"vetoed","nextAction":"retry"}
 ```
@@ -312,6 +327,19 @@ and continuity; structured calls may emit only `agent-complete`. A successful ru
 ends with `done`. If the connection is still writable, an `error` event is followed
 by terminal `done`. The client accepts a chapter only from a validated
 `chapter-accepted` event, never from a delta or a continuity-looking string.
+
+**Relay receipt (P0).** The server emits one `relay-receipt` event on every
+completed pass, approved or vetoed, before `done`. Each step names the agent, a
+one-sentence summary of what it did, and a short list of concrete changes
+(outline: beats added or changed; style: anchor produced and metric deltas
+against the named profile; continuation: draft produced and server word count;
+continuity: checks passed or failed and what was blocked or fixed). The receipt
+also lists every foreshadowing status transition in the pass (`open` ->
+`paidOff`, `open` -> `deferred`, and so on) and the continuity status with its
+failures. The receipt is a client checkpoint like `agent-complete`: it is stored
+in React state and the versioned session record, and the final story renders one
+receipt per accepted chapter. It contains no raw sample, prompt, key, or model
+configuration.
 
 The browser cannot use `EventSource` because this endpoint is POST and carries a
 JSON request body. A client component uses `fetch()` and a `ReadableStream`
@@ -364,7 +392,7 @@ The client workspace is split into focused components:
 | `StyleProfile` | Read-only display of all eight metrics and definitions |
 | `StoryBibleEditor` | Edit and validate the complete story bible |
 | `ChapterWorkspace` | Start a chapter pass, render SSE progress, outline, draft, and continuity result |
-| `FinalStory` | Render the exactly three accepted chapters and expose downloads |
+| `FinalStory` | Render the exactly three accepted chapters and expose downloads, with one relay receipt per chapter |
 
 Tailwind CSS 4 supplies layout and visual tokens. shadcn/ui primitives supply
 accessible inputs, buttons, tabs, alerts, dialogs, and progress indicators.
@@ -375,6 +403,8 @@ pipeline status. It contains no model secret.
 
 The chapter workspace shows a text-labelled `APPROVED` state or a text-labelled
 `VETO` state with failing items and suggested fixes; color is supplementary only.
+It renders the relay receipt for the latest pass (one entry per agent plus the
+foreshadowing transitions) under the draft, for approved and vetoed passes alike.
 It disables a fourth chapter after chapter 3 is accepted. A final-story download
 concatenates all three accepted chapters in order as Markdown; individual chapters
 use Markdown as well. The bible download uses JSON. Progress and terminal status
