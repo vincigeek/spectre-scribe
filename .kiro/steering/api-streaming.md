@@ -77,11 +77,13 @@ minimum typed events are:
 | `agent-complete` | `agent`, typed `output` | A complete, server-validated intermediate output is available |
 | `continuity` | `status`, structured failures when vetoed | The continuity decision is reviewable |
 | `chapter-accepted` | `chapterNumber`, `wordCount`, chapter payload | Approval and the server word-count gate both passed |
+| `relay-receipt` | per-agent step summaries and changes, foreshadowing transitions, continuity status | What the relay did, blocked, or fixed in this pass, for approved and vetoed passes alike |
 | `error` | safe `code`, safe `message`, `retryable` | The run cannot continue |
 | `done` | terminal status, next action | The client may close the stream |
 
 `agent-delta` is optional for outline and continuity. The server may emit only
-`agent-complete` for structured calls. A `done` event is sent after success; an `error` event
+`agent-complete` for structured calls. The server emits one `relay-receipt` event
+on every completed pass, approved or vetoed, before `done`. A `done` event is sent after success; an `error` event
 is followed by a terminal `done` when the connection is still writable. The client never
 accepts a chapter from a delta or from a continuity-looking string; it accepts only the
 validated `chapter-accepted` event.
