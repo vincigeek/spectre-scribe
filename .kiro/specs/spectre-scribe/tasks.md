@@ -163,6 +163,21 @@ must not be edited.
       a draft.
       *(REQ-13, REQ-14)*
 
+- [ ] **T-20a** Enforce the chapter arc roles (P0): the outline agent tags each
+      chapter setup-plus-hook / escalation / payoff, Chapter 2 beats contain at
+      least one disaster-or-reversal beat, continuity requires at least one open
+      foreshadowing item after Chapter 1 and all items paid off after Chapter 3.
+      Arc roles are structural only; no plot, names, or sample content are
+      invented here.
+      *(REQ-13, REQ-14)*
+
+- [ ] **T-20b** Emit one `relay-receipt` SSE event per completed pass (P0),
+      approved or vetoed, before `done`: per-agent summary and concrete changes,
+      every foreshadowing status transition in the pass, and the continuity
+      status with failures. Store it as a client checkpoint and session record.
+      The receipt contains no raw sample, prompt, key, or model configuration.
+      *(REQ-15, REQ-16)*
+
 ---
 
 ## Phase 6 — Streaming workspace and final story
@@ -170,7 +185,9 @@ must not be edited.
 - [ ] **T-21** Build `components/chapter-workspace.tsx`. Start the SSE request for
       the current chapter, show agent progress, and render the beat outline,
       draft, and continuity result. Show a green `APPROVED` state or a red `VETO`
-      state with failing items and fixes. Let the user choose a permitted retry
+      state with failing items and fixes. Render the relay receipt for the pass
+      (one entry per agent plus foreshadowing transitions) for approved and
+      vetoed passes alike. Let the user choose a permitted retry
       point and send the VETO context back in the next request.
       *(REQ-10, REQ-15, REQ-16d)*
 
@@ -182,7 +199,8 @@ must not be edited.
 
 - [ ] **T-23** Build `components/final-story.tsx`. Render the exactly three
       accepted chapters in order, show their titles, and expose individual and
-      complete-story Markdown downloads. Do not invent demo plot or character
+      complete-story Markdown downloads. Show one collapsible relay receipt per
+      accepted chapter. Do not invent demo plot or character
       content in the component defaults.
       *(REQ-08, REQ-16e, REQ-18)*
 
