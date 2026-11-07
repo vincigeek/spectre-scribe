@@ -26,6 +26,11 @@ These rules are product constraints, not suggestions:
   every relevant style-agent context. It is not replaced by an LLM-written description.
 - The story bible has the exact schema in `requirements.md`. It is editable by the user
   before drafting, and agents receive a validated snapshot that they cannot mutate.
+  Its logline, five-sentence synopsis, and per-character goal/motivation/conflict/
+  epiphany come from the Snowflake Method (`steering/snowflake.md`): the outline
+  agent expands the plan layer by layer (logline -> paragraph -> one-page synopsis
+  -> beat list), each layer approved before the next starts, and no later layer may
+  contradict an earlier one.
 - Chapters run through the fixed order `outline -> style -> continuation -> continuity`.
   No agent may be added, removed, reordered, or allowed to accept its own output.
 - Continuity checks cover character alive/dead state, timeline order, and foreshadowing
