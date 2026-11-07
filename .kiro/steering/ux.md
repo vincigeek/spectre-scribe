@@ -63,6 +63,9 @@ For the active chapter, show the current state in text as well as visually:
 - draft and structured checkpoints as they arrive;
 - `APPROVED` with server word count;
 - `VETO` with each failing continuity check, the violated bible field, and the minimal fix;
+- a relay receipt for the pass: one entry per agent (what it did and changed),
+  plus every foreshadowing status transition in that pass. Show it for approved
+  and vetoed passes alike;
 - interrupted, configuration, provider, validation, or terminal retry errors.
 
 Show the retry number as `attempt 1 of 4`, `attempt 2 of 4`, and so on, where the first
@@ -79,6 +82,8 @@ user-visible chapter retry.
 
 - Render exactly the accepted chapters in order, with their user/model-provided titles and
   server word counts.
+- Show one relay receipt per accepted chapter (collapsible), so the final story carries
+  its own audit trail: what each agent did and what foreshadowing changed in that chapter.
 - Keep individual chapter Markdown downloads and the complete three-chapter Markdown
   download in the browser.
 - Keep the JSON story-bible download available without adding runtime files to the server or
