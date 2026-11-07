@@ -26,6 +26,7 @@ Next.js server (Route Handlers and server-only lib/pipeline)
   │     └── ContinuityAgent ── continuity-check.md contract
   ├── AgentDefinitionLoader ── /.kiro/agents/*.md (read-only)
   └── OpenAICompatibleClient ── LLM_API_KEY / LLM_BASE_URL / LLM_MODEL
+        (continuity only: LLM_MODEL_PREMIUM)
 ```
 
 The browser never receives the model key and never calls the model endpoint
@@ -173,6 +174,22 @@ It uses the Chat Completions-compatible request shape for arbitrary providers. A
 provider-specific token-limit field or equivalent Responses API request is
 translated inside this adapter, never in an agent wrapper. No provider response
 body, prompt, key, or credential-bearing URL is sent to the browser.
+
+Two model tiers (decided 2026-11-07): the standard model `LLM_MODEL` serves
+outline, style, and continuation; the premium model `LLM_MODEL_PREMIUM` serves
+continuity only, because it is the judge and benefits most from the stronger
+model. Initial values: standard `gemini-3.5-flash-lite`, premium
+`gemini-4-argon`. The premium model is slow (a trivial call measured ~48 s at
+default thinking) and expensive, so the orchestrator routes at most three
+premium calls per round (one per chapter) and the adapter sends the premium
+calls with the lowest thinking level the provider supports; a premium call that
+exceeds its per-call deadline fails that pass like any other provider error
+(retry rules in §2.5 apply, still capped at 3 retries). Argon-specific
+notes, verified 2026-11-07: thinking tokens bill as output; `temperature`,
+`top_p`, and `top_k` are ignored by this model, so the adapter must not send
+them on premium calls; the half-price introductory rate ($2 input / $10 output
+per 1M tokens) ends 2026-11-30 and doubles 2026-12-01 — budget at the
+December rate, since the submission deadline is 2026-12-05.
 
 `PipelineOrchestrator` assembles a bounded context for one chapter. Every relay
 pass uses the following order:
@@ -453,8 +470,8 @@ ceilings are higher than this initial setting, but the ceiling does not replace 
 product performance test. Configure Node 22.x in both `engines.node` and Vercel,
 then verify the deployed build and function versions.
 
-Set `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL` separately for Preview and
-Production. They are server-only variables without a `NEXT_PUBLIC_` prefix. Vercel
+Set `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, and `LLM_MODEL_PREMIUM`
+separately for Preview and Production. They are server-only variables without a `NEXT_PUBLIC_` prefix. Vercel
 environment changes apply to new deployments, so redeploy after changing them.
 No secret value is committed or printed.
 

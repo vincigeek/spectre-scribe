@@ -34,7 +34,8 @@ must not be edited.
       *(REQ-21)*
 
 - [ ] **T-05** Add server-only configuration loading for `LLM_API_KEY`,
-      `LLM_BASE_URL`, and `LLM_MODEL`. Fail with a safe configuration error when
+      `LLM_BASE_URL`, `LLM_MODEL`, and `LLM_MODEL_PREMIUM` (continuity only,
+      see design §2.4). Fail with a safe configuration error when
       a value is absent. Ensure no value is imported by client components or
       emitted in logs, prompts, SSE events, or downloads.
       *(REQ-17, REQ-22)*

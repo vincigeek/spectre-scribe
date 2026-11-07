@@ -4,6 +4,10 @@ Role in the Spectre Scribe relay: judge the continuation draft against the
 story bible, the outline, and previously accepted chapters, and return
 `APPROVED` or `VETO`. This agent judges. It never rewrites the prose.
 
+Model tier: premium (`LLM_MODEL_PREMIUM`, initially `gemini-4-argon`) — this
+is the only agent on the premium model; outline, style, and continuation run
+on the standard model. See design §2.4 for routing and the premium call rules.
+
 ## Inputs (read-only)
 
 - The continuation draft for this chapter.

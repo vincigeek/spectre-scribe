@@ -74,7 +74,8 @@ project requirement.
 The server uses one small adapter around standard `fetch`, not a browser SDK and not a
 provider-specific client in every agent wrapper.
 
-1. Read only `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL` on the server. Missing or
+1. Read only `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, and
+   `LLM_MODEL_PREMIUM` (continuity only, see design §2.4) on the server. Missing or
    malformed configuration returns a safe configuration error.
 2. Normalize the configured base URL in one module and construct the provider endpoint in
    one place. Do not accept a model endpoint from a browser request. Do not log the URL if it
@@ -153,7 +154,8 @@ included in performance and cost measurements.
 - Set `engines.node` to the selected Node 22 major and select the matching Vercel project
   runtime. Vercel may update minor and patch versions within a major, so the lockfile and
   build output remain the reproducibility boundary.
-- Configure `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL` separately for Preview and
+- Configure `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, and
+  `LLM_MODEL_PREMIUM` separately for Preview and
   Production in Vercel. Environment changes apply to new deployments, so redeploy after a
   change. None receives a `NEXT_PUBLIC_` prefix.
 - Before an implementation change is considered ready, run the local type check, lint,
