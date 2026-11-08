@@ -15,7 +15,8 @@ must not be edited.
       *(REQ-17, REQ-23)*
       Progress 2026-11-08: Next.js 15.5.29, React 19.3.1, TypeScript 5.9.3,
       Tailwind 4.3.5, Vitest 5.1.0 installed with pnpm and a lockfile; `next build`
-      passes. shadcn/ui setup is still open.
+      passes. shadcn/ui was not added: the UI uses plain semantic HTML with
+      Tailwind (no network CLI step); add shadcn/ui later if wanted.
 
 - [x] **T-02** Create the App Router shell in `app/layout.tsx` and
       `app/page.tsx`. Add the workspace navigation for Sample Input, Style
@@ -23,7 +24,7 @@ must not be edited.
       shadcn/ui primitives.
       *(REQ-16)*
 
-- [ ] **T-03** Define shared TypeScript schemas in `lib/story-bible.ts` for
+- [x] **T-03** Define shared TypeScript schemas in `lib/story-bible.ts` for
       `StyleProfile`, `StoryBible`, `Character`, `ForeshadowingEntry`, timeline
       events, beat-sheet entries, accepted chapters, and pipeline status. Validate
       the same schemas in the browser and at every Route Handler boundary.
@@ -32,7 +33,7 @@ must not be edited.
       (`lib/story-bible.ts`) types and parsers are done. Accepted chapter and
       pipeline status types are still open.
 
-- [ ] **T-04** Add the client session model. Keep the style profile, editable
+- [x] **T-04** Add the client session model. Keep the style profile, editable
       bible, pending relay result, accepted chapters, derived continuity ledger,
       retry counters, and pipeline status in React state, and synchronise
       serialisable session data to `localStorage`. Do not create a database or
@@ -171,7 +172,7 @@ must not be edited.
       terminal done events. Keep all orchestration and model access on the server.
       *(REQ-15, REQ-17, REQ-18, REQ-21)*
 
-- [ ] **T-17** Test the orchestration with mocked model responses: a first-pass
+- [x] **T-17** Test the orchestration with mocked model responses: a first-pass
       approval, a VETO followed by a user-requested retry and approval, a retry
       from the continuation stage, and a chapter that fails after three retries.
       Verify that all prompts contain the required read-only context and that no
@@ -182,7 +183,7 @@ must not be edited.
 
 ## Phase 5 — Continuity checks
 
-- [ ] **T-18** Load and apply `/.kiro/hooks/continuity-check.md` as the base
+- [x] **T-18** Load and apply `/.kiro/hooks/continuity-check.md` as the base
       continuity contract without changing it. Add the demo-specific deferred
       state, final-chapter payoff, and structured-result rules in the server-side
       continuity stage. Ensure the full continuity stage checks character
@@ -190,20 +191,20 @@ must not be edited.
       continuation draft and before acceptance.
       *(REQ-13, REQ-23)*
 
-- [ ] **T-19** Parse continuity output into `APPROVED` or structured `VETO`
+- [x] **T-19** Parse continuity output into `APPROVED` or structured `VETO`
       results. Every VETO item must identify the failing check, violated story
       bible field, specific violation, and minimal suggested fix. Preserve open
       items, require `deferredToChapter` for deferred items, and require all open
       foreshadowing to be paid off in chapter 3.
       *(REQ-13, REQ-14)*
 
-- [ ] **T-20** Add tests for a dead character appearing after death, an event out
+- [x] **T-20** Add tests for a dead character appearing after death, an event out
       of timeline order, an unaddressed open foreshadowing item, a valid deferred
       item, and a final-chapter payoff. Confirm the continuity code never rewrites
       a draft.
       *(REQ-13, REQ-14)*
 
-- [ ] **T-20a** Enforce the chapter arc roles (P0): the outline agent tags each
+- [x] **T-20a** Enforce the chapter arc roles (P0): the outline agent tags each
       chapter setup-plus-hook / escalation / payoff, Chapter 2 beats contain at
       least one disaster-or-reversal beat, continuity requires at least one open
       foreshadowing item after Chapter 1 and all items paid off after Chapter 3.
@@ -211,7 +212,7 @@ must not be edited.
       invented here.
       *(REQ-13, REQ-14)*
 
-- [ ] **T-20b** Emit one `relay-receipt` SSE event per completed pass (P0),
+- [x] **T-20b** Emit one `relay-receipt` SSE event per completed pass (P0),
       approved or vetoed, before `done`: per-agent summary and concrete changes,
       every foreshadowing status transition in the pass, and the continuity
       status with failures. Store it as a client checkpoint and session record.
@@ -267,7 +268,7 @@ must not be edited.
       against the measured output.
       *(REQ-19, REQ-24)*
 
-- [ ] **T-26** Verify that the server rejects any accepted draft over the chapter limit (800 words / 1,500 字),
+- [x] **T-26** Verify that the server rejects any accepted draft over the chapter limit (800 words / 1,500 字),
       a fourth chapter request, a fourth retry, an invalid story bible, and an
       unconfigured model endpoint. Verify that no sample retrieval, database
       write, credential log, or client-side secret exposure exists.
@@ -306,7 +307,7 @@ must not be edited.
       call happens on any refusal and that no raw IP or code reaches a log.
       *(REQ-32)*
 
-- [ ] **T-33** Implement replay (design §2.14): the shared `ReplayFile` schema in
+- [x] **T-33** Implement replay (design §2.14): the shared `ReplayFile` schema in
       `lib/replay.ts`, the dev-only recorder with 100 ms delta buckets and the
       forbidden-field filter, `components/replay-player.tsx` with 1x/2x/skip,
       the fixed banner, separate state from the live session, and the three
@@ -341,7 +342,7 @@ must not be edited.
       `chapter` modes.
       *(REQ-09, REQ-23)*
 
-- [ ] **T-30** Confirm that `/.kiro/hooks/continuity-check.md` is present and
+- [x] **T-30** Confirm that `/.kiro/hooks/continuity-check.md` is present and
       defines the character-status, timeline-order, and foreshadowing-payoff
       checks. Confirm that `/.kiro` is at the repository root and is not
       gitignored.

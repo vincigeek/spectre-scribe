@@ -14,6 +14,8 @@ export const AGENT_FILES: Readonly<Record<AgentName, string>> = Object.freeze({
   continuity: ".kiro/agents/continuity.md",
 });
 
+export const HOOK_FILE = ".kiro/hooks/continuity-check.md";
+
 /** A definition shorter than this, or without these sections, is a stub. */
 const MIN_LENGTH = 400;
 const REQUIRED_SECTIONS = ["## Run parameters", "## Inputs", "## Rules"];
@@ -40,6 +42,14 @@ export async function loadAgentDefinitions(root: string = process.cwd()): Promis
     if (!isUsableDefinition(text)) return { ok: false, code: "config-missing", agent };
     defs[agent] = text;
   }
+  // The continuity hook is the base contract for the continuity stage (T-18).
+  let hook: string;
+  try {
+    hook = await readFile(path.join(root, HOOK_FILE), "utf8");
+  } catch {
+    return { ok: false, code: "config-missing", agent: "continuity" };
+  }
+  defs.continuity = `${defs.continuity}\n\n## Base continuity contract (${HOOK_FILE})\n\n${hook.trim()}\n`;
   const frozen = Object.freeze(defs as Record<AgentName, string>);
   cache = { root, defs: frozen };
   return { ok: true, definitions: frozen };

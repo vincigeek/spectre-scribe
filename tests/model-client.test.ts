@@ -30,6 +30,7 @@ describe("agent loader (T-13)", () => {
     const r = await loadAgentDefinitions();
     expect(r.ok).toBe(true);
     if (r.ok) for (const a of Object.keys(AGENT_FILES)) expect(r.definitions[a as keyof typeof AGENT_FILES]).toContain("## Run parameters");
+    if (r.ok) expect(r.definitions.continuity).toContain("Base continuity contract (.kiro/hooks/continuity-check.md)");
   });
   it("fails safely on a missing or stub file", async () => {
     clearAgentCache();
