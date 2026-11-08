@@ -1,23 +1,30 @@
 "use client";
-/** Human-readable relay receipt (design §2.6, P0). */
+/** Human-readable relay receipt, monospace rail style (design §2.6, P0). */
 import { useI18n } from "@/lib/i18n";
 import type { RelayReceipt } from "@/lib/pipeline-types";
 
 export function RelayReceiptView({ receipt }: { receipt: RelayReceipt }) {
   const { t } = useI18n();
   return (
-    <div className="space-y-2 text-sm">
-      <p className="text-xs uppercase tracking-wide text-neutral-400">{t("receipt.title", { n: receipt.retryCount + 1 })}</p>
-      <ol className="space-y-1">
+    <div className="space-y-3 text-sm">
+      <p className="font-mono text-xs text-muted">{t("receipt.title", { n: receipt.retryCount + 1 })}</p>
+      <ol className="space-y-2 border-l-2 border-line pl-3">
         {receipt.steps.map((s) => (
-          <li key={s.agent} className="rounded border border-neutral-800 p-2">
-            <span className="font-mono text-xs text-neutral-400">{s.agent}</span> {s.summary}
-            {s.changes.length > 0 && <ul className="list-disc pl-5 text-xs text-neutral-400">{s.changes.map((c, i) => <li key={i}>{c}</li>)}</ul>}
+          <li key={s.agent}>
+            <span className="label-pixel text-[0.7rem] text-signal">{s.agent}</span>
+            <p className="text-text">{s.summary}</p>
+            {s.changes.length > 0 && (
+              <ul className="mt-1 space-y-0.5 font-mono text-xs text-muted">
+                {s.changes.map((c, i) => <li key={i}>· {c}</li>)}
+              </ul>
+            )}
           </li>
         ))}
       </ol>
       {receipt.foreshadowingTransitions.length > 0 && (
-        <p className="text-xs">{t("receipt.foreshadowing")} {receipt.foreshadowingTransitions.map((t) => `${t.id} ${t.from} → ${t.to}`).join(" · ")}</p>
+        <p className="font-mono text-xs text-amber">
+          {t("receipt.foreshadowing")} {receipt.foreshadowingTransitions.map((x) => `${x.id} ${x.from} → ${x.to}`).join(" · ")}
+        </p>
       )}
     </div>
   );

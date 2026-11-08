@@ -176,46 +176,102 @@ export function Workspace() {
   const replayButtons = replayList.length > 0 && (
     <div className="flex flex-wrap gap-2 text-sm">
       {replayList.map((r) => (
-        <button key={r.name} type="button" className="rounded border border-violet-600 px-3 py-1 text-violet-200" onClick={() => void loadReplay(r.name)}>
-          {t("top.watch", { title: r.title, language: r.language })}
+        <button key={r.name} type="button" className="btn btn-ghost btn-sm text-replay" onClick={() => void loadReplay(r.name)}>
+          ▷ {t("top.watch", { title: r.title, language: r.language })}
         </button>
       ))}
     </div>
   );
 
+  type StepState = "done" | "current" | "locked";
+  const steps: Array<[MessageKey, StepState]> = replay
+    ? []
+    : [
+        ["step.sample", session.styleProfile ? "done" : "current"],
+        ["step.style", session.styleProfile ? "done" : "locked"],
+        ["step.bible", !session.styleProfile ? "locked" : bibleValid ? "done" : "current"],
+        ["step.chapters", !bibleValid ? "locked" : session.acceptedChapters.length === 3 ? "done" : "current"],
+        ["step.final", session.acceptedChapters.length === 3 ? "done" : "locked"],
+      ];
+
+  const header = (
+    <header className="sticky top-0 z-20 -mx-4 border-b-2 border-line bg-ink/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="flex items-center gap-2">
+          <span className="signal-dot" aria-hidden />
+          <h1 className="label-pixel text-lg text-signal">Spectre Scribe</h1>
+        </div>
+        {replay ? (
+          <span className="label-pixel text-xs text-replay">REPLAY</span>
+        ) : (
+          <span className="font-mono text-xs text-muted">
+            {restoreNotice && restoreNotice === t("top.restored") ? t("shell.restored") : session.styleProfile ? t("shell.saved") : t("shell.new")}
+          </span>
+        )}
+        <div className="ml-auto flex flex-wrap items-center gap-3">
+          <LanguageSwitch />
+          {!replay && (
+            <>
+              <label className="flex items-center gap-2 text-sm text-muted">
+                <span className="label-pixel text-[0.65rem] text-signal">{t("top.live")}</span>
+                {t("top.accessCode")}
+                <input type="password" autoComplete="off" value={code} onChange={(e) => { setCode(e.target.value); setAccessCode(e.target.value); }} className="field w-32 py-1" />
+              </label>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={newSession}>{t("top.newSession")}</button>
+            </>
+          )}
+        </div>
+      </div>
+      {steps.length > 0 && (
+        <ol className="mt-3 flex flex-wrap items-center gap-2" aria-label={t("step.progress")}>
+          {steps.map(([k, st], i) => (
+            <li key={k} className="flex items-center gap-2">
+              <span className={`chip ${st === "done" ? "chip-done" : st === "current" ? "chip-running" : ""}`}>
+                <span aria-hidden>{st === "done" ? "■" : st === "current" ? "▶" : "□"}</span>
+                <span className="label-pixel">{i + 1} {t(k)}</span>
+                <span className="sr-only">{t(`step.${st}`)}</span>
+              </span>
+              {i < steps.length - 1 && <span aria-hidden className="text-line-strong">—</span>}
+            </li>
+          ))}
+        </ol>
+      )}
+    </header>
+  );
+
+  const footer = (
+    <footer className="border-t-2 border-line pt-4 text-xs text-muted">{t("shell.footer")}</footer>
+  );
+
   if (replay) {
     const f = replay.file;
     return (
-      <div className="space-y-6">
-        <div role="status" className="sticky top-0 z-10 flex flex-wrap items-center gap-3 rounded border border-violet-600 bg-violet-950 p-2 text-sm text-violet-100">
-          <strong>REPLAY</strong> · {t("replay.recorded", { date: f.recordedAt.slice(0, 10) })} · {f.models.standard} / {f.models.premium}
-          <span className="ml-auto flex gap-2">
-            <button type="button" className="rounded border border-violet-400 px-2" onClick={() => play(replay, 1)}>1x</button>
-            <button type="button" className="rounded border border-violet-400 px-2" onClick={() => play(replay, 2)}>2x</button>
-            <button type="button" className="rounded border border-violet-400 px-2" onClick={() => play(replay, "skip")}>{t("replay.skip")}</button>
-            <button type="button" className="rounded bg-violet-700 px-2" onClick={exitReplay}>{t("replay.exit")}</button>
+      <div className="space-y-10">
+        {header}
+        <div role="status" className="px-frame px-frame-replay sticky top-20 z-10 flex flex-wrap items-center gap-3 p-3 text-sm">
+          <span className="label-pixel text-replay">REPLAY</span>
+          <span className="font-mono text-xs text-text">{t("replay.recorded", { date: f.recordedAt.slice(0, 10) })} · {f.models.standard} / {f.models.premium}</span>
+          <span className="ml-auto flex flex-wrap gap-2">
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => play(replay, 1)}>1x</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => play(replay, 2)}>2x</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => play(replay, "skip")}>{t("replay.skip")}</button>
+            <button type="button" className="btn btn-amber btn-sm" onClick={exitReplay}>{t("replay.exit")}</button>
           </span>
         </div>
         <StyleProfileView profile={f.styleProfile} />
         <StoryBibleEditor bible={f.bible} language={f.language} onChange={() => undefined} readOnly />
         <ChapterWorkspace chapterNumber={(replay.pass.chapterNumber as 1 | 2 | 3) ?? null} pass={replay.pass} retriesUsed={replay.pass.retryCount} canStart={false} blockedReason={null} replay onStart={() => undefined} />
-        <FinalStory title={f.bible.logline} chapters={replay.chapters} replay />
+        <FinalStory title={f.bible.logline} chapters={replay.chapters} replay bible={f.bible} />
+        {footer}
       </div>
     );
   }
 
   return (
-    <div className="space-y-10">
-      <div className="flex flex-wrap items-center gap-3 text-sm">
-        <span className="rounded bg-emerald-900 px-2 py-0.5 text-xs font-semibold text-emerald-200">{t("top.live")}</span>
-        <label className="flex items-center gap-2">
-          {t("top.accessCode")}
-          <input type="password" autoComplete="off" value={code} onChange={(e) => { setCode(e.target.value); setAccessCode(e.target.value); }} className="rounded border border-neutral-700 bg-neutral-900 px-2 py-0.5" />
-        </label>
-        <LanguageSwitch />
-        <button type="button" className="ml-auto rounded border border-neutral-600 px-3 py-1" onClick={newSession}>{t("top.newSession")}</button>
-      </div>
-      {restoreNotice && <p role="status" className="text-sm text-sky-300">{restoreNotice}</p>}
+    <div className="space-y-12">
+      {header}
+      <p className="max-w-2xl text-sm text-muted">{t("app.subtitle")}</p>
+      {restoreNotice && <p role="status" className="font-mono text-xs text-signal">✓ {restoreNotice}</p>}
       {replayButtons}
 
       <SampleInput onProfile={setProfile} disabled={locked} />
@@ -232,16 +288,16 @@ export function Workspace() {
             />
           )}
           {undo && !locked && (
-            <button type="button" className="rounded border border-neutral-600 px-3 py-1 text-sm" onClick={() => { setSession((s) => ({ ...s, bible: undo })); setUndo(null); }}>{t("top.undo")}</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setSession((s) => ({ ...s, bible: undo })); setUndo(null); }}>↶ {t("top.undo")}</button>
           )}
           <StoryBibleEditor bible={bible} language={language} onChange={(b) => setSession((s) => ({ ...s, bible: b }))} readOnly={locked} />
-          {locked && <p className="text-xs text-neutral-500">{t("top.bibleLocked")}</p>}
+          {locked && <p className="font-mono text-xs text-muted">▢ {t("top.bibleLocked")}</p>}
         </div>
       )}
 
       {refusal && (
-        <div role="alert" className="rounded border border-amber-700 p-3 text-sm text-amber-300">
-          {t(`err.${refusal}` as MessageKey)} {replayList.length > 0 ? t("top.watchInstead") : ""}
+        <div role="alert" className="px-frame px-frame-amber space-y-2 p-4 text-sm text-amber">
+          <p>⚠ {t(`err.${refusal}` as MessageKey)} {replayList.length > 0 ? t("top.watchInstead") : ""}</p>
           {replayButtons}
         </div>
       )}
@@ -257,12 +313,13 @@ export function Workspace() {
           onStart={(r) => void start(r)}
         />
       )}
-      {!nextChapter && <p className="text-sm text-neutral-400">{t("top.allAccepted")}</p>}
+      {!nextChapter && <p className="font-mono text-sm text-signal">✓ {t("top.allAccepted")}</p>}
 
-      <FinalStory title={bible.logline} chapters={session.acceptedChapters} replay={false} />
+      <FinalStory title={bible.logline} chapters={session.acceptedChapters} replay={false} bible={session.bible} />
       {IS_DEV && session.acceptedChapters.length === 3 && (
-        <button type="button" className="rounded border border-violet-600 px-3 py-1 text-sm text-violet-200" onClick={() => void downloadReplay()}>{t("top.downloadReplay")}</button>
+        <button type="button" className="btn btn-ghost btn-sm text-replay" onClick={() => void downloadReplay()}>{t("top.downloadReplay")}</button>
       )}
+      {footer}
     </div>
   );
 }

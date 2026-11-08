@@ -1,9 +1,10 @@
 "use client";
-/** Chapter workspace: progress, outline, draft, verdict, receipt, retry (REQ-15, REQ-16d; T-21). */
+/** Chapter workspace: header row, agent strip, prose pane + relay rail, veto panel (ux.md §4; T-21). */
 import { useI18n, type MessageKey } from "@/lib/i18n";
 import type { PassView } from "@/lib/pass-reducer";
 import { AGENT_ORDER, MAX_RETRIES, type RestartPoint } from "@/lib/pipeline-types";
 import { RelayReceiptView } from "./relay-receipt";
+import { Badge, MonoLabel, Panel, Section, type Status } from "./ui";
 
 type Props = {
   chapterNumber: 1 | 2 | 3 | null;
@@ -15,6 +16,15 @@ type Props = {
   onStart: (restartAt: RestartPoint) => void;
 };
 
+function passBadge(p: PassView): Status {
+  if (p.status === "running") return "running";
+  if (p.status === "approved") return "approved";
+  if (p.status === "vetoed") return "veto";
+  if (p.status === "failed") return "failed";
+  if (p.status === "interrupted") return "interrupted";
+  return "waiting";
+}
+
 export function ChapterWorkspace({ chapterNumber, pass, retriesUsed, canStart, blockedReason, replay, onStart }: Props) {
   const { t } = useI18n();
   const running = pass.status === "running";
@@ -22,75 +32,111 @@ export function ChapterWorkspace({ chapterNumber, pass, retriesUsed, canStart, b
   const needsRetry = pass.status === "vetoed" || pass.status === "failed" || pass.status === "interrupted";
   const hasCheckpoints = Boolean(pass.outline && pass.style);
   const beats = (pass.outline as { beats?: Array<{ title: string; premise: string }> } | null)?.beats ?? [];
+  const status = passBadge(pass);
+  const attempt = pass.status === "idle" ? retriesUsed + 1 : pass.retryCount + 1;
+  const veto = pass.continuity?.status === "VETO" ? pass.continuity : null;
 
   return (
-    <section aria-labelledby="ws-h" className="space-y-4">
-      <h2 id="ws-h" className="text-lg font-semibold">{t("ws.title")}{chapterNumber ? t("ws.chapterSuffix", { n: chapterNumber }) : ""}</h2>
+    <Section id="chapters" number="04" title={t("ws.title").replace(/^\d+ \/ /, "")} subtitle={t("ws.subtitle")}>
+      <Panel tone={status === "approved" ? "signal" : status === "veto" || status === "failed" ? "veto" : status === "running" ? "amber" : undefined}>
+        <div className="flex flex-wrap items-center gap-3">
+          {chapterNumber && <span className="label-pixel text-sm text-text">{t("ws.chapterOf", { n: chapterNumber })}</span>}
+          <Badge status={status} label={t(`badge.${status === "veto" ? "veto" : status === "approved" ? "approved" : status === "running" ? "running" : status === "failed" ? "failed" : status === "interrupted" ? "interrupted" : "waiting"}` as MessageKey)} />
+          <span className="font-mono text-xs text-muted">{t("ws.attempt", { n: attempt, max: MAX_RETRIES + 1 })}</span>
+        </div>
 
-      <ol className="flex flex-wrap gap-2 text-xs" aria-label={t("ws.progress")}>
-        {AGENT_ORDER.map((a) => {
-          const done = pass.completedAgents.includes(a);
-          const now = pass.currentAgent === a;
-          return (
-            <li key={a} className={`rounded px-2 py-1 ${now ? "bg-sky-700 text-white" : done ? "bg-emerald-900 text-emerald-200" : "bg-neutral-800 text-neutral-400"}`}>
-              {a} {now ? t("ws.agentRunning") : done ? t("ws.agentDone") : ""}
-            </li>
-          );
-        })}
-      </ol>
-      <p role="status" aria-live="polite" className="text-sm text-neutral-400">
-        {running ? t("ws.running", { agent: pass.currentAgent ?? "relay" }) : pass.status === "idle" ? "" : t("ws.passStatus", { status: pass.status })}
-      </p>
+        <ol className="mt-4 flex flex-wrap items-center gap-2" aria-label={t("ws.progress")}>
+          {AGENT_ORDER.map((a, i) => {
+            const done = pass.completedAgents.includes(a);
+            const now = pass.currentAgent === a;
+            const failed = !now && !done && pass.status === "failed" && pass.completedAgents.length === i;
+            const cls = now ? "chip-running" : done ? "chip-done" : failed ? "chip-failed" : "";
+            const label = now ? t("agent.running") : done ? t("agent.done") : t("agent.pending");
+            return (
+              <li key={a} className="flex items-center gap-2">
+                <span className={`chip ${cls}`}>
+                  <span aria-hidden>{now ? "◐" : done ? "■" : failed ? "✕" : "□"}</span>
+                  <span className="label-pixel">{a}</span>
+                  <span className="opacity-80">{label}</span>
+                </span>
+                {i < AGENT_ORDER.length - 1 && <span aria-hidden className="text-muted">→</span>}
+              </li>
+            );
+          })}
+        </ol>
+        <p role="status" aria-live="polite" className="sr-only">
+          {running ? t("ws.running", { agent: pass.currentAgent ?? "relay" }) : pass.status === "idle" ? "" : t("ws.passStatus", { status: pass.status })}
+        </p>
+      </Panel>
+
+      {pass.error && (
+        <p role="alert" className="text-sm text-veto">
+          ✕ {t(`err.${pass.error.code}` as MessageKey)} <code className="font-mono text-xs opacity-70">({pass.error.code})</code>
+        </p>
+      )}
+
+      <div className="grid gap-4 lg:grid-cols-5">
+        <Panel className="lg:col-span-3">
+          <div className="mb-3 flex items-center justify-between">
+            <MonoLabel>{t("ws.prose")}</MonoLabel>
+            {pass.wordCount !== null && <span className="font-mono text-xs text-muted">{t("ws.serverCount", { n: pass.wordCount }).replace(/^ · /, "")}</span>}
+          </div>
+          {pass.draft ? (
+            <div className={`prose-story ${running ? "blink-cursor" : ""}`}>{pass.draft}</div>
+          ) : (
+            <p className={`text-sm text-muted ${running ? "blink-cursor" : ""}`}>{t("ws.proseEmpty")}</p>
+          )}
+        </Panel>
+        <Panel className="space-y-4 lg:col-span-2">
+          <MonoLabel>{t("ws.rail")}</MonoLabel>
+          {beats.length > 0 && (
+            <details open className="text-sm">
+              <summary className="cursor-pointer font-mono text-xs text-muted">{t("ws.beatOutline")}</summary>
+              <ol className="mt-2 list-decimal space-y-1 pl-5">
+                {beats.map((b, i) => <li key={i}><span className="font-medium text-text">{b.title}</span> <span className="text-muted">— {b.premise}</span></li>)}
+              </ol>
+            </details>
+          )}
+          {pass.receipt ? <RelayReceiptView receipt={pass.receipt} /> : <p className="text-sm text-muted">{t("ws.railEmpty")}</p>}
+        </Panel>
+      </div>
+
+      {veto && (
+        <Panel tone="veto">
+          <p className="label-pixel mb-3 text-sm text-veto">✕ {t("ws.vetoTitle")}</p>
+          <ul className="space-y-3">
+            {veto.failures.map((f, i) => (
+              <li key={i} className="grid gap-1 text-sm sm:grid-cols-[auto_1fr]">
+                <code className="font-mono text-xs text-veto">{f.checkId} · {f.bibleField}</code>
+                <span>{f.violation}</span>
+                <span className="font-mono text-xs text-muted sm:col-start-2">{t("ws.fix")} {f.fix}</span>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      )}
+      {pass.continuity?.status === "APPROVED" && (
+        <p className="text-sm text-signal">✓ {t("badge.approved")}</p>
+      )}
 
       {!replay && chapterNumber && (
-        <div className="flex flex-wrap items-center gap-2 text-sm">
+        <div className="flex flex-wrap items-center gap-3">
           {!needsRetry && pass.status !== "approved" && (
-            <button type="button" className="rounded bg-emerald-600 px-4 py-1 font-medium text-white disabled:opacity-40" disabled={!canStart || running} onClick={() => onStart("outline")}>
-              {t("ws.write", { n: chapterNumber })}
+            <button type="button" className="btn btn-primary" disabled={!canStart || running} onClick={() => onStart("outline")}>
+              ▶ {t("ws.write", { n: chapterNumber })}
             </button>
           )}
           {needsRetry && retriesLeft > 0 && (
             <>
-              <button type="button" className="rounded bg-amber-600 px-3 py-1 text-white disabled:opacity-40" disabled={!canStart || running} onClick={() => onStart("outline")}>{t("ws.retryOutline")}</button>
-              <button type="button" className="rounded bg-amber-700 px-3 py-1 text-white disabled:opacity-40" disabled={!canStart || running || !hasCheckpoints} onClick={() => onStart("continuation")}>{t("ws.retryContinuation")}</button>
-              <span className="text-neutral-400">{t("ws.retriesLeft", { n: retriesLeft, max: MAX_RETRIES })}</span>
+              <button type="button" className="btn btn-amber" disabled={!canStart || running} onClick={() => onStart("outline")}>{t("ws.retryOutline")}</button>
+              <button type="button" className="btn btn-ghost" disabled={!canStart || running || !hasCheckpoints} onClick={() => onStart("continuation")}>{t("ws.retryContinuation")}</button>
+              <span className="font-mono text-xs text-muted">{t("ws.retriesLeft", { n: retriesLeft, max: MAX_RETRIES })}</span>
             </>
           )}
-          {needsRetry && retriesLeft <= 0 && <span className="text-red-400">{t("ws.retriesExhausted", { max: MAX_RETRIES })}</span>}
-          {blockedReason && <span className="text-amber-400">{blockedReason}</span>}
+          {needsRetry && retriesLeft <= 0 && <span className="text-sm text-veto">{t("ws.retriesExhausted", { max: MAX_RETRIES })}</span>}
+          {blockedReason && <span className="text-sm text-amber">⚠ {blockedReason}</span>}
         </div>
       )}
-
-      {pass.error && <p role="alert" className="text-sm text-red-400">{t(`err.${pass.error.code}` as MessageKey)} <code className="text-xs">({pass.error.code})</code></p>}
-
-      {beats.length > 0 && (
-        <details open className="rounded border border-neutral-800 p-2 text-sm">
-          <summary className="cursor-pointer font-medium">{t("ws.beatOutline")}</summary>
-          <ol className="list-decimal pl-5">{beats.map((b, i) => <li key={i}><span className="font-medium">{b.title}</span> — {b.premise}</li>)}</ol>
-        </details>
-      )}
-
-      {pass.draft && (
-        <article className="rounded border border-neutral-800 p-3">
-          <p className="mb-2 text-xs text-neutral-400">{t("ws.draft")}{pass.wordCount !== null ? t("ws.serverCount", { n: pass.wordCount }) : ""}</p>
-          <div className="whitespace-pre-wrap font-serif leading-relaxed">{pass.draft}</div>
-        </article>
-      )}
-
-      {pass.continuity && (
-        <div className={`rounded border p-3 text-sm ${pass.continuity.status === "APPROVED" ? "border-emerald-700" : "border-red-700"}`}>
-          <p className="font-semibold">{pass.continuity.status === "APPROVED" ? "APPROVED" : "VETO"}</p>
-          {pass.continuity.failures.length > 0 && (
-            <ul className="mt-1 space-y-1">
-              {pass.continuity.failures.map((f, i) => (
-                <li key={i}><code className="text-xs">{f.checkId} · {f.bibleField}</code> {f.violation} <span className="text-neutral-400">{t("ws.fix")} {f.fix}</span></li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-
-      {pass.receipt && <RelayReceiptView receipt={pass.receipt} />}
-    </section>
+    </Section>
   );
 }

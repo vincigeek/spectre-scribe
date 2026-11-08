@@ -27,7 +27,7 @@ try {
 
   await page.getByLabel("Sample text").fill(sample);
   await page.getByRole("button", { name: "Analyse style" }).click();
-  await page.getByRole("heading", { name: "02 / Style profile" }).waitFor({ timeout: T });
+  await page.getByRole("heading", { name: /^02\s+Style profile/ }).waitFor({ timeout: T });
   step("style profile shown");
 
   const seed = page.locator('section[aria-labelledby="seed-h"]');
@@ -64,11 +64,11 @@ try {
 
   // T-23a: switch the UI to Simplified Chinese; the story itself stays as written.
   await page.getByLabel("Interface language").selectOption("zh-CN");
-  await page.getByRole("heading", { name: "01 / 样本" }).waitFor({ timeout: T });
-  await page.getByRole("heading", { name: /^05 \/ 完整故事/ }).waitFor({ timeout: T });
+  await page.getByRole("heading", { name: /^01\s+样本/ }).waitFor({ timeout: T });
+  await page.getByRole("heading", { name: /^05\s+完整故事/ }).waitFor({ timeout: T });
   if ((await page.evaluate(() => document.documentElement.lang)) !== "zh-CN") throw new Error("html lang not updated");
   await page.reload({ waitUntil: "networkidle" });
-  await page.getByRole("heading", { name: "01 / 样本" }).waitFor({ timeout: T });
+  await page.getByRole("heading", { name: /^01\s+样本/ }).waitFor({ timeout: T });
   step("UI switched to 中文 and kept after reload");
 
   if (shot) await page.screenshot({ path: shot, fullPage: false });

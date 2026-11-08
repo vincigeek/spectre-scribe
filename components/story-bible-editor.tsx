@@ -11,7 +11,8 @@ import {
   type StoryBible,
 } from "@/lib/story-bible";
 import { useI18n } from "@/lib/i18n";
-import { countUnits, LANGUAGE_LIMITS, type Language } from "@/lib/text-units";
+import { countUnits, LANGUAGE_LIMITS, splitSentences, type Language } from "@/lib/text-units";
+import { Section } from "./ui";
 
 export function emptyBible(): StoryBible {
   return {
@@ -24,13 +25,15 @@ export function emptyBible(): StoryBible {
   };
 }
 
-const input = "w-full rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm";
-const small = "rounded border border-neutral-600 px-2 py-0.5 text-xs";
+const input = "field";
+const small = "btn btn-ghost btn-sm";
+const group = "px-frame space-y-3 p-4";
+const legend = "label-pixel float-left mb-2 w-full text-xs text-signal";
 
 function Field({ label, value, onChange, area, hint }: { label: string; value: string; onChange: (v: string) => void; area?: boolean; hint?: string }) {
   return (
     <label className="block space-y-1 text-sm">
-      <span className="text-neutral-300">{label}{hint && <span className="ml-2 text-neutral-500">{hint}</span>}</span>
+      <span className="text-text">{label}{hint && <span className="ml-2 font-mono text-xs text-muted">{hint}</span>}</span>
       {area ? <textarea className={input} rows={3} value={value} onChange={(e) => onChange(e.target.value)} /> : <input className={input} value={value} onChange={(e) => onChange(e.target.value)} />}
     </label>
   );
@@ -40,7 +43,7 @@ function StringList({ label, items, onChange }: { label: string; items: string[]
   const { t } = useI18n();
   return (
     <fieldset className="space-y-1">
-      <legend className="text-sm text-neutral-300">{label}</legend>
+      <legend className="mb-1 text-sm text-text">{label}</legend>
       {items.map((v, i) => (
         <div key={i} className="flex gap-2">
           <input className={input} aria-label={`${label} ${i + 1}`} value={v} onChange={(e) => onChange(items.map((x, j) => (j === i ? e.target.value : x)))} />
@@ -88,41 +91,46 @@ export function StoryBibleEditor({ bible, language, onChange, readOnly }: Props)
   }
 
   return (
-    <section aria-labelledby="bible-h" className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 id="bible-h" className="text-lg font-semibold">{t("bible.title")}</h2>
-        <button type="button" className={small} onClick={() => triggerDownload(safeFileName(bible.logline || "story-bible", "json"), bibleJson(bible), "application/json")}>{t("bible.download")}</button>
-      </div>
+    <Section
+      id="bible"
+      number="03"
+      title={t("bible.title").replace(/^\d+ \/ /, "")}
+      subtitle={t("bible.subtitle")}
+      aside={<button type="button" className={small} onClick={() => triggerDownload(safeFileName(bible.logline || "story-bible", "json"), bibleJson(bible), "application/json")}>{t("bible.download")}</button>}
+    >
       {!validation.ok && (
-        <div role="status" className="rounded border border-amber-700 bg-amber-950/40 p-2 text-xs text-amber-300">
-          <p className="font-medium">{t("bible.issues", { n: validation.issues.length })}</p>
+        <div role="status" className="px-frame px-frame-amber p-3 text-xs text-amber">
+          <p className="font-medium">⚠ {t("bible.issues", { n: validation.issues.length })}</p>
           <ul className="list-disc pl-5">{validation.issues.slice(0, 12).map((i, k) => <li key={k}><code>{i.path || "bible"}</code>: {i.message}</li>)}</ul>
         </div>
       )}
       <fieldset disabled={readOnly} className="space-y-4">
+        <fieldset className={group}>
+        <legend className={legend}>{t("bible.basics")}</legend>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label={t("bible.genre")} value={bible.genre} onChange={(v) => set("genre", v)} />
           <Field label={t("bible.tone")} value={bible.tone} onChange={(v) => set("tone", v)} />
         </div>
         <Field label={t("bible.logline")} hint={t("bible.loglineHint", { n: countUnits(bible.logline, language), max: limits.loglineMax, unit })} value={bible.logline} onChange={(v) => set("logline", v)} />
-        <Field label={t("bible.synopsis")} hint={t("bible.synopsisHint")} area value={bible.synopsis} onChange={(v) => set("synopsis", v)} />
+        <Field label={t("bible.synopsis")} hint={`${t("bible.sentences", { n: bible.synopsis.trim() ? splitSentences(bible.synopsis, language).length : 0 })} · ${t("bible.synopsisHint")}`} area value={bible.synopsis} onChange={(v) => set("synopsis", v)} />
+        </fieldset>
 
-        <fieldset className="space-y-2 rounded border border-neutral-800 p-3">
-          <legend className="px-1 text-sm font-medium">{t("bible.setting")}</legend>
+        <fieldset className={group}>
+          <legend className={legend}>{t("bible.setting")}</legend>
           <Field label={t("bible.timePeriod")} value={bible.setting.timePeriod} onChange={(v) => set("setting", { ...bible.setting, timePeriod: v })} />
           <StringList label={t("bible.locations")} items={bible.setting.locations} onChange={(v) => set("setting", { ...bible.setting, locations: v })} />
           <StringList label={t("bible.worldRules")} items={bible.setting.worldRules} onChange={(v) => set("setting", { ...bible.setting, worldRules: v })} />
         </fieldset>
 
-        <fieldset className="space-y-2 rounded border border-neutral-800 p-3">
-          <legend className="px-1 text-sm font-medium">{t("bible.characters")}</legend>
+        <fieldset className={group}>
+          <legend className={legend}>{t("bible.characters")}</legend>
           {bible.characters.map((c, i) => (
-            <div key={c.id} className="space-y-2 border-b border-neutral-800 pb-3">
+            <div key={c.id} className="space-y-2 border-b-2 border-dashed border-line pb-3 last:border-0">
               <div className="flex flex-wrap items-end gap-2">
-                <code className="text-xs text-neutral-500">{c.id}</code>
+                <code className="font-mono text-xs text-muted">{c.id}</code>
                 <div className="flex-1"><Field label={t("bible.name")} value={c.name} onChange={(v) => setChar(i, { name: v })} /></div>
                 <label className="text-sm">{t("bible.role")}{" "}
-                  <select className="rounded bg-neutral-900 px-2 py-1" value={c.role} onChange={(e) => setChar(i, { role: e.target.value as Character["role"] })}>
+                  <select className="field" value={c.role} onChange={(e) => setChar(i, { role: e.target.value as Character["role"] })}>
                     <option value="protagonist">protagonist</option><option value="antagonist">antagonist</option><option value="supporting">supporting</option>
                   </select>
                 </label>
@@ -140,13 +148,13 @@ export function StoryBibleEditor({ bible, language, onChange, readOnly }: Props)
           <button type="button" className={small} onClick={addCharacter}>{t("bible.addCharacter")}</button>
         </fieldset>
 
-        <fieldset className="space-y-2 rounded border border-neutral-800 p-3">
-          <legend className="px-1 text-sm font-medium">{t("bible.foreshadowing")}</legend>
+        <fieldset className={group}>
+          <legend className={legend}>{t("bible.foreshadowing")}</legend>
           {bible.foreshadowing.map((f, i) => (
             <div key={i} className="flex flex-wrap items-end gap-2">
-              <code className="text-xs text-neutral-500">{f.id}</code>
+              <code className="font-mono text-xs text-muted">{f.id}</code>
               <div className="flex-1"><Field label={t("bible.itemDescription")} value={f.description} onChange={(v) => setFs(i, { description: v })} /></div>
-              <select aria-label={t("bible.status")} className="rounded bg-neutral-900 px-2 py-1 text-sm" value={f.status} onChange={(e) => {
+              <select aria-label={t("bible.status")} className="field" value={f.status} onChange={(e) => {
                 const status = e.target.value as ForeshadowingEntry["status"];
                 const { deferredToChapter: _d, ...rest } = f;
                 setFs(i, status === "deferred" ? { status, deferredToChapter: 2 } : { ...rest, status, deferredToChapter: undefined });
@@ -154,7 +162,7 @@ export function StoryBibleEditor({ bible, language, onChange, readOnly }: Props)
                 <option value="open">open</option><option value="paidOff">paidOff</option><option value="deferred">deferred</option>
               </select>
               {f.status === "deferred" && (
-                <select aria-label={t("bible.deferredTo")} className="rounded bg-neutral-900 px-2 py-1 text-sm" value={f.deferredToChapter ?? 2} onChange={(e) => setFs(i, { deferredToChapter: Number(e.target.value) })}>
+                <select aria-label={t("bible.deferredTo")} className="field" value={f.deferredToChapter ?? 2} onChange={(e) => setFs(i, { deferredToChapter: Number(e.target.value) })}>
                   {[1, 2, 3].map((n) => <option key={n} value={n}>{t("bible.chapterN", { n })}</option>)}
                 </select>
               )}
@@ -167,11 +175,11 @@ export function StoryBibleEditor({ bible, language, onChange, readOnly }: Props)
           }}>{t("bible.addItem")}</button>
         </fieldset>
 
-        <fieldset className="space-y-2 rounded border border-neutral-800 p-3">
-          <legend className="px-1 text-sm font-medium">{t("bible.timeline")}</legend>
+        <fieldset className={group}>
+          <legend className={legend}>{t("bible.timeline")}</legend>
           {bible.timeline.map((ev, i) => (
             <div key={i} className="flex items-end gap-2">
-              <select aria-label={t("bible.chapter")} className="rounded bg-neutral-900 px-2 py-1 text-sm" value={ev.chapterNumber} onChange={(e) => set("timeline", bible.timeline.map((x, j) => (j === i ? { ...x, chapterNumber: Number(e.target.value) } : x)))}>
+              <select aria-label={t("bible.chapter")} className="field" value={ev.chapterNumber} onChange={(e) => set("timeline", bible.timeline.map((x, j) => (j === i ? { ...x, chapterNumber: Number(e.target.value) } : x)))}>
                 {[1, 2, 3].map((n) => <option key={n} value={n}>{t("bible.chShort", { n })}</option>)}
               </select>
               <div className="flex-1"><Field label={t("bible.event")} value={ev.event} onChange={(v) => set("timeline", bible.timeline.map((x, j) => (j === i ? { ...x, event: v } : x)))} /></div>
@@ -181,10 +189,10 @@ export function StoryBibleEditor({ bible, language, onChange, readOnly }: Props)
           <button type="button" className={small} onClick={() => set("timeline", [...bible.timeline, { chapterNumber: 1, event: "" }])}>{t("bible.addEvent")}</button>
         </fieldset>
 
-        <fieldset className="space-y-2 rounded border border-neutral-800 p-3">
-          <legend className="px-1 text-sm font-medium">{t("bible.beatSheet")}</legend>
+        <fieldset className={group}>
+          <legend className={legend}>{t("bible.beatSheet")}</legend>
           {bible.beatSheet.map((b, i) => (
-            <div key={b.chapterNumber} className="space-y-2 border-b border-neutral-800 pb-3">
+            <div key={b.chapterNumber} className="space-y-2 border-b-2 border-dashed border-line pb-3 last:border-0">
               <p className="text-sm font-medium">{t("bible.beatChapter", { n: b.chapterNumber })}</p>
               <Field label={t("bible.beatTitle")} value={b.title} onChange={(v) => setBeat(i, { title: v })} />
               <Field label={t("bible.premise")} area value={b.premise} onChange={(v) => setBeat(i, { premise: v })} />
@@ -192,7 +200,7 @@ export function StoryBibleEditor({ bible, language, onChange, readOnly }: Props)
                 {bible.characters.map((c) => (
                   <label key={c.id} className="flex items-center gap-1">
                     {c.name || c.id}
-                    <select className="rounded bg-neutral-900 px-1" value={b.characterStates[c.id] ?? "alive"} onChange={(e) => setBeat(i, { characterStates: { ...b.characterStates, [c.id]: e.target.value as CharacterStatus } })}>
+                    <select className="field py-0.5" value={b.characterStates[c.id] ?? "alive"} onChange={(e) => setBeat(i, { characterStates: { ...b.characterStates, [c.id]: e.target.value as CharacterStatus } })}>
                       {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </label>
@@ -202,6 +210,6 @@ export function StoryBibleEditor({ bible, language, onChange, readOnly }: Props)
           ))}
         </fieldset>
       </fieldset>
-    </section>
+    </Section>
   );
 }
