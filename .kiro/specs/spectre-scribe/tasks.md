@@ -13,6 +13,9 @@ must not be edited.
       application with React 19 and TypeScript. Add Tailwind CSS 4 and the
       shadcn/ui component setup. Confirm `pnpm dev` starts the app.
       *(REQ-17, REQ-23)*
+      Progress 2026-11-08: Next.js 15.5.29, React 19.3.1, TypeScript 5.9.3,
+      Tailwind 4.3.5, Vitest 5.1.0 installed with pnpm and a lockfile; `next build`
+      passes. shadcn/ui setup is still open.
 
 - [ ] **T-02** Create the App Router shell in `app/layout.tsx` and
       `app/page.tsx`. Add the workspace navigation for Sample Input, Style
@@ -25,6 +28,9 @@ must not be edited.
       events, beat-sheet entries, accepted chapters, and pipeline status. Validate
       the same schemas in the browser and at every Route Handler boundary.
       *(REQ-06, REQ-07, REQ-21)*
+      Progress 2026-11-08: `StyleProfile` (`lib/style-profile.ts`) and `StoryBible`
+      (`lib/story-bible.ts`) types and parsers are done. Accepted chapter and
+      pipeline status types are still open.
 
 - [ ] **T-04** Add the client session model. Keep the style profile, editable
       bible, pending relay result, accepted chapters, derived continuity ledger,
@@ -33,7 +39,7 @@ must not be edited.
       server-side story store.
       *(REQ-21)*
 
-- [ ] **T-05** Add server-only configuration loading for `LLM_API_KEY`,
+- [x] **T-05** Add server-only configuration loading for `LLM_API_KEY`,
       `LLM_BASE_URL`, `LLM_MODEL`, and the optional `LLM_MODEL_PREMIUM` (continuity
       only; falls back to `LLM_MODEL`, see design §2.4). Fail with a safe
       configuration error when a required value is absent. Ensure no value is imported by client components or
@@ -44,7 +50,7 @@ must not be edited.
 
 ## Phase 2 — Pure style analysis
 
-- [ ] **T-06** Implement `lib/style-analyser.ts` as a pure TypeScript module. Export
+- [x] **T-06** Implement `lib/style-analyser.ts` as a pure TypeScript module. Export
       a style-analysis function and compute all eight required metrics:
       sentence-length mean, sentence-length standard deviation, type-token ratio,
       dialogue ratio, pacing-marker counts per 100 words, paragraph-length mean,
@@ -52,7 +58,7 @@ must not be edited.
       length. Keep the exact definitions in requirements §2.2.
       *(REQ-04, REQ-05)*
 
-- [ ] **T-06a** Implement `lib/text-units.ts` as a pure module with
+- [x] **T-06a** Implement `lib/text-units.ts` as a pure module with
       `detectLanguage`, `countUnits`, `splitSentences`, `splitParagraphs`, and
       `LANGUAGE_LIMITS` (design §2.11). Use it from the analyser, the bible
       validator, both Route Handlers, the orchestrator, and the browser counter.
@@ -60,13 +66,13 @@ must not be edited.
       字 boundaries.
       *(REQ-24, REQ-25, REQ-26)*
 
-- [ ] **T-07** Implement `app/api/style/analyse/route.ts`. Validate the sample,
+- [x] **T-07** Implement `app/api/style/analyse/route.ts`. Validate the sample,
       reject empty or under-minimum input for the detected language (accept an
       optional language override), call the pure analyser, and return a
       structured JSON profile. The route must not fetch text or call a model.
       *(REQ-01, REQ-02, REQ-03, REQ-05)*
 
-- [ ] **T-08** Add Vitest coverage in `tests/style-analyser.test.ts` for known
+- [x] **T-08** Add Vitest coverage in `tests/style-analyser.test.ts` for known
       sentence and paragraph lengths, standard deviations, vocabulary ratio,
       no-dialogue input, all-dialogue input, pacing-marker subcounts,
       stopword-excluded word length, the language-minimum validation errors (199/200 words, 399/400 字), and
@@ -91,7 +97,7 @@ must not be edited.
       with character states.
       *(REQ-06, REQ-07, REQ-08, REQ-16c)*
 
-- [ ] **T-11** Validate story bible invariants before a pipeline request: required
+- [x] **T-11** Validate story bible invariants before a pipeline request: required
       top-level fields, valid role and status values, non-empty one-paragraph world
       rules, one-sentence character descriptions, at least one `protagonist`
       (the same rule as the draft check in design §2.12), `alive` status for new

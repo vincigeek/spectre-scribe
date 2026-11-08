@@ -78,8 +78,9 @@ typed validation result. The Route Handler rejects input shorter than the langua
 (§2.11) before analysis, while direct callers also receive a finite, non-throwing result.
 
 The profile holds four metadata fields (§2.11): `language` (`en` or `zh`),
-`lengthUnit` (`word` or `char`), `segmentation` (`intl` or `char`), and
-`analyserVersion`. It keeps these eight metric fields and calculation rules:
+`lengthUnit` (`word` or `char`), `segmentation` (`none` for `en`; `intl` or
+`char` for `zh`), and `analyserVersion`, plus `detectedLanguage` (`en`, `zh`, or
+`other`) so the UI can show the REQ-25 notice. It keeps these eight metric fields and calculation rules:
 
 | Field | Computation |
 | --- | --- |
@@ -668,8 +669,9 @@ and Thai text is not supported. An "other" sample gets the `en` rules and a
 visible notice.
 
 **Style profile metadata.** `StyleProfile` gains `language: "en" | "zh"`,
-`lengthUnit: "word" | "char"`, `segmentation: "intl" | "char"`, and
-`analyserVersion: string`. The eight metric fields keep their names.
+`detectedLanguage: "en" | "zh" | "other"`, `lengthUnit: "word" | "char"`,
+`segmentation: "none" | "intl" | "char"` (`none` for English, which uses
+regex tokens), and `analyserVersion: string`. The eight metric fields keep their names.
 
 **Chinese word segmentation.** Only two metrics need words: `typeTokenRatio` and
 `avgWordLen`. For `zh` they use `Intl.Segmenter("zh", { granularity: "word" })`,

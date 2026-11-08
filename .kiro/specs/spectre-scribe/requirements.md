@@ -317,8 +317,9 @@ REQ-26: The eight metrics SHALL follow these language-specific rules:
         a. Sentence boundaries (both languages): `.`, `!`, `?`, `。`, `！`, `？`.
            A closing quote or bracket directly after the mark stays in the same
            sentence. A period between two digits is not a boundary. An ellipsis
-           is not a boundary. A run of boundary marks (`?!`, `。。`, `...`) is one
-           boundary, so no empty sentence is created. A final fragment without
+           is not a boundary: `…`, `……`, and three or more `.` in a row. Any other
+           run of boundary marks (`?!`, `！？`, `。。`) is one boundary, so no
+           empty sentence is created. Sentences never cross a paragraph break. A final fragment without
            a mark counts as one sentence.
         b. Vocabulary richness and average word length: `en` tokens are Unicode
            letter runs (apostrophes and hyphens inside a word stay in it); `zh`

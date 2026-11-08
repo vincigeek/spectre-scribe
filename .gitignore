@@ -2,3 +2,10 @@ node_modules/
 dist/
 .env
 # NOTE: .kiro is intentionally NOT ignored. Kiroween requires /.kiro at the repo root.
+.next/
+out/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+.env.local
+.env.*.local
