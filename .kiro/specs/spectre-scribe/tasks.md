@@ -145,7 +145,7 @@ must not be edited.
       `LLM_MODEL_PREMIUM`) and never exposes the key.
       *(REQ-09, REQ-17, REQ-22, REQ-23)*
 
-- [ ] **T-14** Implement server-side wrappers for the outline, style,
+- [x] **T-14** Implement server-side wrappers for the outline, style,
       continuation, and continuity agents. Assemble each prompt from the named
       style profile, full read-only story bible, previously accepted chapters, and
       earlier outputs from the current relay pass. Include structured VETO notes
