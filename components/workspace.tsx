@@ -277,7 +277,7 @@ export function Workspace() {
           )}
         </div>
       </div>
-      <TabsList variant="line" aria-label={t("nav.pages")} className="mt-3 h-auto w-full justify-start gap-1 overflow-x-auto p-0">
+      <TabsList variant="line" aria-label={t("nav.pages")} className="mt-3 h-auto w-full flex-wrap justify-start gap-1 overflow-visible p-0">
         {PAGES.map((p, i) => {
           const locked = !available[p];
           const trigger = (
