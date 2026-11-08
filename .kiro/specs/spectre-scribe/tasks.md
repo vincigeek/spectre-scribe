@@ -163,7 +163,7 @@ must not be edited.
       additional retries, and reject a fourth retry.
       *(REQ-09, REQ-10, REQ-14, REQ-20)*
 
-- [ ] **T-16** Implement `app/api/pipeline/stream/route.ts` as an SSE Route
+- [x] **T-16** Implement `app/api/pipeline/stream/route.ts` as an SSE Route
       Handler. Validate the chapter number, style profile, story bible, accepted
       chapters, derived continuity ledger, retry count, and veto context. Emit typed
       agent-start,
