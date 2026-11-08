@@ -38,6 +38,9 @@ must not be edited.
       serialisable session data to `localStorage`. Do not create a database or
       server-side story store.
       *(REQ-21)*
+      Progress 2026-11-08: pure session helpers done in `lib/session.ts`
+      (create, derive ledger, serialise, validated restore). The React hook is
+      wired with the UI.
 
 - [x] **T-05** Add server-only configuration loading for `LLM_API_KEY`,
       `LLM_BASE_URL`, `LLM_MODEL`, and the optional `LLM_MODEL_PREMIUM` (continuity
@@ -124,7 +127,7 @@ must not be edited.
       core field.
       *(REQ-12, REQ-30, REQ-31)*
 
-- [ ] **T-12** Implement browser-side download helpers in `lib/downloads.ts`.
+- [x] **T-12** Implement browser-side download helpers in `lib/downloads.ts`.
       Download the story bible as JSON, each accepted chapter as Markdown, and
       the complete three-chapter story as an ordered Markdown file. Do not write
       runtime output under `/.kiro` or on the server filesystem.
