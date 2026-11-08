@@ -110,9 +110,12 @@ const TASKS: Readonly<Record<AgentName, string>> = {
 function continuationTask(ctx: PassContext): string {
   const instructions = [TASKS.continuation];
   const limits = LANGUAGE_LIMITS[ctx.styleProfile.language];
+  instructions.push(
+    `The continuation must expand every outline beat into its own full scene with concrete action, substantive dialogue, sensory detail, and a consequence that changes what happens next; cover every beat in order and never compress a beat into a summary paragraph.`,
+  );
   if (ctx.chapterNumber === 3) {
     instructions.push(
-      `Chapter 3 is the payoff chapter: expand every outline beat into its own full scene. Give each payoff, resolution, and epiphany beat concrete action, dialogue, sensory detail, and a consequence; never compress a beat into a summary paragraph. Aim above chapter_min with a safety margin while staying below chapter_max.`,
+      `Chapter 3 is the payoff chapter: give each payoff, resolution, and epiphany beat concrete action, dialogue, sensory detail, and a consequence; aim above chapter_min with a safety margin while staying below chapter_max.`,
     );
   }
   if (ctx.continuationIssues && ctx.continuationIssues.length > 0) {

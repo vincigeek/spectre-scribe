@@ -218,19 +218,21 @@ pass uses the following order:
    of at most 400 words (700 字 in Chinese). It targets the named quantitative metrics and does not
    need to complete the chapter.
 3. **Continuation agent** reads all previous inputs plus the style anchor and
-   produces a complete chapter draft aimed at the soft generation target of 640
-   words (1,200 字 in Chinese), while never exceeding the hard maximum of 800
-   words (1,500 字 in Chinese), never falling below the 640-word (1,200 字)
-   minimum, and never falling below the 25% dialogue
-   minimum. Prose may be streamed upstream, but the server retains and
-   validates the complete text. Rhythm is part of the draft: sentence length
-   varies on purpose (short for urgency, longer for atmosphere), no three long
-   paragraphs in a row without a break, and the chapter ends on its hook beat
-   with nothing after it. A draft that fails a server-side count check
-   (over the limit, under the length minimum, or under the dialogue minimum) is retried in-pass at most
-   three continuation attempts total, feeding the exact measured numbers into
-   the next attempt; these in-pass repair attempts do not increment the
-   user-visible chapter retry count.
+   produces a complete chapter draft aimed at the soft generation target of 704
+   words (1,320 字 in Chinese), which is `ceil(chapter_min × 1.1)` for the default
+   limits, while never exceeding the hard maximum of 800 words (1,500 字 in
+   Chinese), never falling below the 640-word (1,200 字) minimum, and never falling
+   below the 25% dialogue minimum. It expands every outline beat into its own full
+   scene with concrete action, substantive dialogue, sensory detail, and a
+   consequence, in beat order; it never compresses a beat into a summary paragraph.
+   Prose may be streamed upstream, but the server retains and validates the complete
+   text. Rhythm is part of the draft: sentence length varies on purpose (short for
+   urgency, longer for atmosphere), no three long paragraphs in a row without a
+   break, and the chapter ends on its hook beat with nothing after it. A draft that
+   fails a server-side count check (over the limit, under the length minimum, or
+   under the dialogue minimum) is retried in-pass at most three continuation attempts
+   total, feeding the exact measured numbers into the next attempt; these in-pass
+   repair attempts do not increment the user-visible chapter retry count.
 4. **Continuity agent** reads all previous inputs plus the draft and returns
    `APPROVED` or `VETO` with structured failures. It does not rewrite the draft.
 
@@ -677,7 +679,7 @@ server count always agree.
 | Minimum sample | 200 words | 400 字 |
 | Logline maximum | 15 words | 30 字 |
 | Style anchor maximum | 400 words | 700 字 |
-| Chapter generation target (soft) | 640 words | 1,200 字 |
+| Chapter generation target (soft) | 704 words | 1,320 字 |
 | Chapter minimum (REQ-20) | 640 words | 1,200 字 |
 | Dialogue minimum (REQ-20) | 25% | 25% |
 | Dialogue target (soft) | 25–35% | 25–35% |
@@ -687,14 +689,15 @@ server count always agree.
 | Continuation output cap | 1,600 tokens | 2,600 tokens |
 | Continuity output cap | 800 tokens | 1,300 tokens |
 
-The chapter generation target is 80% of the language-specific maximum, and the
-same number is the enforced length minimum (`chapter_min`): a draft below it
-is rejected with the `chapter-short` error code, retryable as a chapter retry.
-The server enforces the hard maximum with the existing `word-limit` retry
-behavior for over-limit drafts. The dialogue minimum is likewise a hard
-acceptance check. The server recounts dialogue share with the same
-paired-delimiter measure as the style profile (REQ-26c) and rejects a draft
-below 30% with the `dialogue-share` error code, retryable as a chapter retry.
+The chapter generation target is `ceil(chapter_min × 1.1)` (704 words / 1,320 字
+for the default limits), remains below the language-specific maximum, and leaves a
+safety margin above the enforced length minimum (`chapter_min`: 640 words / 1,200
+字). A draft below `chapter_min` is rejected with the `chapter-short` error code,
+retryable as a chapter retry. The server enforces the hard maximum with the existing
+`word-limit` retry behavior for over-limit drafts. The dialogue minimum is likewise
+a hard acceptance check. The server recounts dialogue share with the same
+paired-delimiter measure as the style profile (REQ-26c) and rejects a draft below
+25% with the `dialogue-share` error code, retryable as a chapter retry.
 
 The `zh` token caps are about 1.6 times the `en` caps. They are a starting guess,
 because tokens per 字 differ between model tokenizers.
@@ -745,7 +748,7 @@ story_language: zh
 length_unit: 字
 logline_max: 30
 style_anchor_max: 700
-chapter_target: 1200
+chapter_target: 1320
 chapter_min: 1200
 dialogue_min: 25%
 chapter_max: 1500

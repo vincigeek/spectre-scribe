@@ -35,9 +35,9 @@ for the chapter title only). No JSON wrapper, no commentary, no explanation of
 what was changed.
 
 - Aim for `chapter_target` length units and finish the complete chapter near that
-  target; `chapter_min` carries the same number as a hard server minimum (see
-  below), so a draft near the target also clears the floor. Never pad the
-  prose with repetition.
+  target; the initial target is `ceil(chapter_min × 1.1)` (704 words / 1,320 字
+  with the default limits), and it remains below `chapter_max`. Never pad the prose
+  with repetition.
 - At least `chapter_min` length units (default 640 words / 1,200 字). The
   server counts it and a draft below the minimum is a failed output, not a
   draft to trim later.
@@ -58,6 +58,10 @@ what was changed.
 - Written in `story_language`.
 - The draft covers the beats in order. Every beat must appear in the draft;
   a missing beat is a failed output.
+- Expand every outline beat into its own full scene with concrete action,
+  substantive dialogue, sensory detail, and a consequence that changes what
+  happens next. Cover every beat in order; never compress a beat into a summary
+  paragraph.
 - The draft follows the style anchor: sentence length and variation, dialogue
   share, pacing markers, vocabulary range, and paragraph shape must track the
   eight metric targets. A draft that ignores the anchor is a failed output.

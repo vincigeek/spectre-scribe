@@ -263,10 +263,10 @@ REQ-19: The full flow, including sample analysis and all 3 chapters with no
 
 REQ-20: No generated chapter SHALL exceed the chapter limit of REQ-24 (800 words
         for English, 1,500 字 for Chinese). The continuation prompt SHALL include
-        a soft generation target at 80% of that language's maximum (640 words,
-        1,200 字). The server SHALL validate the hard maximum and the minimum
-        below, counted in the language's length unit, before accepting a
-        chapter. Every
+        a soft first-draft generation target of ceil(chapterMin × 1.1), capped at
+        chapter_max (704 words, 1,320 字). The server SHALL validate the hard maximum
+        and the minimum below, counted in the language's length unit, before accepting
+        a chapter. Every
         generated chapter SHALL contain at least 640 words (1,200 字 for
         Chinese), counted in the language's length unit; the server SHALL
         validate this minimum and reject a draft below it as a retryable
@@ -313,7 +313,7 @@ REQ-24: The system SHALL support samples and generated stories in English (`en`)
         | Minimum sample | 200 | 400 |
         | Logline maximum | 15 | 30 |
         | Style anchor maximum | 400 | 700 |
-        | Chapter generation target (soft) | 640 | 1,200 |
+        | Chapter generation target (soft) | 704 | 1,320 |
         | Chapter minimum (REQ-20) | 640 | 1,200 |
         | Dialogue minimum (REQ-20) | 25% | 25% |
         | Dialogue target (soft) | 25–35% | 25–35% |

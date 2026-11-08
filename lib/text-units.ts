@@ -17,7 +17,7 @@ export type LanguageLimits = {
   minSample: number;
   loglineMax: number;
   styleAnchorMax: number;
-  /** Soft generation target; the server enforces only `chapterMax`. */
+  /** Soft generation target with a 10% safety margin above `chapterMin`. */
   chapterTarget: number;
   /** Minimum draft length (0..chapterMax); the server rejects below it. */
   chapterMin: number;
@@ -33,7 +33,7 @@ export const LANGUAGE_LIMITS: Readonly<Record<Language, Readonly<LanguageLimits>
     minSample: 200,
     loglineMax: 15,
     styleAnchorMax: 400,
-    chapterTarget: 640,
+    chapterTarget: 704,
     chapterMin: 640,
     dialogueMin: 0.25,
     chapterMax: 800,
@@ -44,7 +44,7 @@ export const LANGUAGE_LIMITS: Readonly<Record<Language, Readonly<LanguageLimits>
     minSample: 400,
     loglineMax: 30,
     styleAnchorMax: 700,
-    chapterTarget: 1200,
+    chapterTarget: 1320,
     chapterMin: 1200,
     dialogueMin: 0.25,
     chapterMax: 1500,
