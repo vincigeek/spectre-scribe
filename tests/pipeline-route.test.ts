@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AgentDefinitions } from "@/lib/server/agent-loader";
 import type { ChatRequest, ModelClient } from "@/lib/server/model-client";
+import { createLiveGate, createMemoryStore } from "@/lib/server/live-gate";
 import { handlePipelineRequest, parsePipelineRequest } from "@/lib/server/pipeline-handler";
 import { profileToTargets } from "@/lib/server/prompts";
 import { createSseParser, formatSse, parseSseData, type SseRecord } from "@/lib/sse";
@@ -18,7 +19,7 @@ const replies: Record<string, string> = {
   JUDGE: JSON.stringify({ chapterNumber: 1, status: "APPROVED", failures: [] }),
 };
 const client = { endpoint: "x", chat: async (r: ChatRequest) => ({ ok: true as const, content: replies[r.messages[0]!.content]!, model: "m", transportRetries: 0 }) } as unknown as ModelClient;
-const deps = { getClient: () => client, getDefinitions: async () => defs };
+const deps = { getClient: () => client, getDefinitions: async () => defs, gate: null };
 
 const body = (o: Record<string, unknown> = {}) => ({
   runId: "run-1", chapterNumber: 1, retryCount: 0, restartAt: "outline", styleProfile: profile, bible: validBible(),
@@ -85,12 +86,27 @@ describe("handlePipelineRequest (T-16)", () => {
     expect((await handlePipelineRequest(req(body(), "text/plain"), deps)).status).toBe(415);
   });
   it("returns config-missing with no client and makes no model call", async () => {
-    const res = await handlePipelineRequest(req(body()), { getClient: () => null, getDefinitions: async () => defs });
+    const res = await handlePipelineRequest(req(body()), { getClient: () => null, getDefinitions: async () => defs, gate: null });
     expect(res.status).toBe(503);
     expect(await res.json()).toMatchObject({ code: "config-missing" });
   });
   it("never leaks agent definitions into the stream", async () => {
     const text = await (await handlePipelineRequest(req(body()), deps)).text();
     expect(text).not.toMatch(/OUTLINE"|"JUDGE/);
+  });
+  it("refuses before any model call when the gate refuses", async () => {
+    let calls = 0;
+    const counting = { endpoint: "x", chat: async () => { calls += 1; return { ok: false as const, code: "bad-request" as const, transportRetries: 0 }; } } as unknown as ModelClient;
+    const gate = createLiveGate({ liveOn: true, accessCode: "c", hashSecret: "s", store: createMemoryStore() });
+    const res = await handlePipelineRequest(req(body()), { getClient: () => counting, getDefinitions: async () => defs, gate });
+    expect(res.status).toBe(401);
+    expect(calls).toBe(0);
+  });
+  it("releases the per-IP slot after the stream ends", async () => {
+    const gate = createLiveGate({ liveOn: true, accessCode: null, hashSecret: "s", store: createMemoryStore() });
+    await (await handlePipelineRequest(req(body()), { ...deps, gate })).text();
+    const second = await handlePipelineRequest(req(body()), { ...deps, gate });
+    expect(second.status).toBe(200);
+    await second.text();
   });
 });

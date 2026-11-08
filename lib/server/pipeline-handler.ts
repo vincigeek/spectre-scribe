@@ -11,6 +11,7 @@ import { parseStyleProfile } from "@/lib/style-profile";
 import { countUnits } from "@/lib/text-units";
 import { loadAgentDefinitions, type AgentDefinitions } from "./agent-loader";
 import { loadModelConfig } from "./config";
+import { refusalResponse, sharedLiveGate, type LiveGate } from "./live-gate";
 import { createModelClient, type ModelClient } from "./model-client";
 import { runChapterPass, type PassInput } from "./orchestrator";
 
@@ -21,6 +22,8 @@ export const KEEP_ALIVE_MS = 15_000;
 export type HandlerDeps = {
   getClient?: () => ModelClient | null;
   getDefinitions?: () => Promise<AgentDefinitions | null>;
+  /** null disables the gate (tests only). */
+  gate?: LiveGate | null;
   keepAliveMs?: number;
   deadlineMs?: number;
 };
@@ -127,9 +130,20 @@ export async function handlePipelineRequest(request: Request, deps: HandlerDeps 
   const parsed = parsePipelineRequest(body);
   if (!parsed.ok) return jsonError(400, "bad-request", parsed.message);
 
+  const gate = deps.gate === undefined ? sharedLiveGate() : deps.gate;
+  let release = async () => undefined as void;
+  if (gate) {
+    const g = await gate.check(request, "pass");
+    if (!g.ok) return refusalResponse(g.refusal);
+    release = g.release;
+  }
+
   const client = (deps.getClient ?? defaultClient)();
   const definitions = await (deps.getDefinitions ?? defaultDefinitions)();
-  if (!client || !definitions) return jsonError(503, "config-missing", "The server is not configured for live runs.");
+  if (!client || !definitions) {
+    await release();
+    return jsonError(503, "config-missing", "The server is not configured for live runs.");
+  }
 
   const deadline = AbortSignal.timeout(deps.deadlineMs ?? ROUTE_DEADLINE_MS);
   const signal = AbortSignal.any([request.signal, deadline]);
@@ -153,6 +167,7 @@ export async function handlePipelineRequest(request: Request, deps: HandlerDeps 
       } finally {
         clearInterval(timer);
         open = false;
+        await release();
         try {
           controller.close();
         } catch {

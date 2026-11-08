@@ -288,7 +288,7 @@ must not be edited.
       document migration.
       *(REQ-17, REQ-22)*
 
-- [ ] **T-31** Implement `lib/live-gate.ts` (design §2.13): live-mode switch,
+- [x] **T-31** Implement `lib/live-gate.ts` (design §2.13): live-mode switch,
       access code check with constant-time compare and wrong-code lockout,
       per-IP concurrency lock, per-IP 10-minute windows, and UTC daily budgets
       on Upstash Redis over REST. Fail closed in Production when the store is
@@ -299,7 +299,7 @@ must not be edited.
       design if they changed.
       *(REQ-32)*
 
-- [ ] **T-32** Test the live gate with a fake store: missing code, wrong code,
+- [x] **T-32** Test the live gate with a fake store: missing code, wrong code,
       lockout after 10 wrong codes, a second concurrent request, the 9th pass in
       10 minutes, the 61st pass in a day, store down in Production, lock
       released after an error and after a client abort. Assert that no model
