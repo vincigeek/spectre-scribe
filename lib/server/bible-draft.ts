@@ -11,7 +11,7 @@ import { loadAgentDefinitions } from "./agent-loader";
 import { loadModelConfig } from "./config";
 import { refusalResponse, sharedLiveGate, type LiveGate } from "./live-gate";
 import { createModelClient, type ModelClient } from "./model-client";
-import { parseJsonText } from "./prompts";
+import { BIBLE_CORE_SCHEMA, createBibleStructureSchema, parseJsonText } from "./prompts";
 
 export type BibleSeed = { genre: string; tone: string; idea: string; notes?: string };
 export type BibleCore = Pick<StoryBible, "logline" | "synopsis" | "setting" | "characters">;
@@ -61,11 +61,31 @@ function normaliseCore(raw: Rec): Rec {
   return out;
 }
 
+function layerEnvelopeIssues(raw: Rec, expectedLayer: DraftLayer): string[] {
+  const issues: string[] = [];
+  if (raw.mode !== "plan") issues.push("mode must be plan");
+  if (raw.layer !== expectedLayer) issues.push(`layer must be ${expectedLayer}`);
+  return issues;
+}
+
+function acceptedCoreAsDraft(raw: unknown, language: StyleProfile["language"]): unknown {
+  if (!isRecord(raw) || raw.mode !== undefined || raw.layer !== undefined || typeof raw.synopsis !== "string") return raw;
+  return {
+    ...raw,
+    mode: "plan",
+    layer: "core",
+    synopsis: splitSentences(raw.synopsis, language).map((sentence) => sentence.text),
+  };
+}
+
 export function checkCore(raw: unknown, seed: BibleSeed, profile: StyleProfile): Check<BibleCore> {
   if (!isRecord(raw)) return { ok: false, issues: ["draft must be an object"] };
   if (raw.error) return { ok: false, issues: ["the model reported it could not draft this layer"] };
+  const issues = layerEnvelopeIssues(raw, "core");
+  if (!Array.isArray(raw.synopsis) || raw.synopsis.length !== 5 || !raw.synopsis.every((s) => typeof s === "string")) {
+    issues.push("synopsis must be an array of five strings");
+  }
   const core = normaliseCore(raw);
-  const issues: string[] = [];
   for (const k of Object.keys(core)) if (!["logline", "synopsis", "setting", "characters"].includes(k)) issues.push(`${k}: unknown field`);
   const chars = Array.isArray(core.characters) ? core.characters : [];
   if (chars.length < 2 || chars.length > 4) issues.push("characters: must have 2 to 4 entries");
@@ -84,10 +104,10 @@ export function checkCore(raw: unknown, seed: BibleSeed, profile: StyleProfile):
 export function checkStructure(raw: unknown, seed: BibleSeed, core: BibleCore, profile: StyleProfile): Check<BibleStructure> {
   if (!isRecord(raw)) return { ok: false, issues: ["draft must be an object"] };
   if (raw.error) return { ok: false, issues: ["the model reported it could not draft this layer"] };
+  const issues = layerEnvelopeIssues(raw, "structure");
   const s = { ...raw };
   delete s.mode;
   delete s.layer;
-  const issues: string[] = [];
   for (const k of Object.keys(s)) {
     if (["logline", "synopsis", "setting", "characters"].includes(k)) issues.push(`${k}: the structure layer must not change the core layer`);
     else if (!["foreshadowing", "timeline", "beatSheet"].includes(k)) issues.push(`${k}: unknown field`);
@@ -175,7 +195,7 @@ export async function handleBibleDraftRequest(request: Request, deps: DraftDeps 
   if (!seed.ok) return jsonError(400, "bad-request", "The seed is invalid.", seed.issues);
   let core: BibleCore | undefined;
   if (layer === "structure") {
-    const c = checkCore(body.core, seed.value, p.value);
+    const c = checkCore(acceptedCoreAsDraft(body.core, p.value.language), seed.value, p.value);
     if (!c.ok) return jsonError(400, "bad-request", "The accepted core layer is invalid.", c.issues);
     core = c.value;
   }
@@ -195,7 +215,7 @@ export async function handleBibleDraftRequest(request: Request, deps: DraftDeps 
       tier: "standard",
       messages: buildPlanMessages(definition, layer, seed.value, p.value, core),
       maxTokens: DRAFT_CAPS[p.value.language],
-      jsonSchema: { name: `bible_${layer}`, schema: { type: "object" }, strict: false },
+      jsonSchema: { name: `bible_${layer}`, schema: layer === "core" ? BIBLE_CORE_SCHEMA : createBibleStructureSchema(core!.characters.map((character) => character.id)) },
       signal: request.signal,
     });
     if (!r.ok) return jsonError(r.code === "provider-auth" ? 502 : 503, r.code, "The draft call failed.");

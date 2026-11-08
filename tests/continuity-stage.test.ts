@@ -14,7 +14,7 @@ import { acceptedChapter, validBible } from "./fixtures-bible";
 
 const profile = (() => { const r = analyseStyle(Array.from({ length: 21 }, (_, i) => sentence(10, i * 10)).join(" ")); if (!r.ok) throw new Error("x"); return r.profile; })();
 const defs = { outline: "OUTLINE DEF", style: "STYLE DEF", continuation: "CONT DEF", continuity: "JUDGE DEF" } as AgentDefinitions;
-const DRAFT = "# Kept Title\n\nThe exact draft text the server must not change.";
+const DRAFT = `# Kept Title\n\n${"\"We must go now,\" she said. \"The exact draft text the server must not change.\" ".repeat(50)}`.trimEnd();
 
 const beat = (n: 1 | 2 | 3, o: Record<string, unknown> = {}) => ({
   title: "Beat", premise: n === 2 ? "A reversal hits." : "Something happens.", characterIds: ["char-1"],
@@ -94,13 +94,16 @@ describe("T-20: continuity checks", () => {
     b.beatSheet[1]!.characterStates["char-2"] = "dead";
     b.beatSheet[2]!.characterStates["char-2"] = "dead";
     const r = await run(input(2, { bible: b }), { OUTLINE: outline(2, [beat(2, { characterIds: ["char-2"] })]), STYLE: style(2), CONT: DRAFT, JUDGE: approved(2) });
-    expect(r.agents).toEqual(["OUTLINE"]);
+    // The outline check fails, so the pass retries the outline call twice
+    // with the check issues fed back, then fails before any prose is written.
+    expect(r.agents).toEqual(["OUTLINE", "OUTLINE", "OUTLINE"]);
+    expect(r.calls[1]!.messages[1]!.content).toContain("OUTLINE CHECKS FAILED ON THE PREVIOUS ATTEMPT");
     expect(r.events.find((e) => e.event === "error")).toMatchObject({ data: { code: "schema-mismatch" } });
     expect(r.accepted).toBeUndefined();
   });
   it("Check A: the ledger marks a character dead even if the beat sheet does not", async () => {
     const r = await run(input(3, { characterStatuses: { "char-1": "dead" } }), { OUTLINE: outline(3), STYLE: style(3), CONT: DRAFT, JUDGE: approved(3) });
-    expect(r.agents).toEqual(["OUTLINE"]);
+    expect(r.agents).toEqual(["OUTLINE", "OUTLINE", "OUTLINE"]);
   });
   it("Check A: a flashback, memory, or ghost exception is allowed", async () => {
     const b = validBible();
@@ -117,7 +120,7 @@ describe("T-20: continuity checks", () => {
   });
   it("Check C: chapter 3 must pay off an item still open", async () => {
     const r = await run(input(3), { OUTLINE: outline(3, [beat(3, { foreshadowingPaidOff: ["fs-1"] })]), STYLE: style(3), CONT: DRAFT, JUDGE: approved(3) });
-    expect(r.agents).toEqual(["OUTLINE"]);
+    expect(r.agents).toEqual(["OUTLINE", "OUTLINE", "OUTLINE"]);
   });
   it("Check C: a deferred item counts as open and must be paid off in chapter 3", async () => {
     const state = { "fs-1": "paidOff" as const, "fs-2": "deferred" as const };

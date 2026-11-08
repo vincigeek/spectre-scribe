@@ -20,6 +20,7 @@ import {
 import type { CharacterStatus, ForeshadowingStatus, StoryBible } from "@/lib/story-bible";
 import type { StyleProfile } from "@/lib/style-profile";
 import { countUnits, LANGUAGE_LIMITS } from "@/lib/text-units";
+import { dialogueRatio } from "@/lib/style-analyser";
 import { checkOutline, checkStyle } from "./agent-output";
 import type { AgentDefinitions } from "./agent-loader";
 import type { ModelClient, Tier } from "./model-client";
@@ -77,8 +78,14 @@ class PassError extends Error {
 }
 
 const RETRYABLE: Partial<Record<ErrorCode, boolean>> = {
-  "schema-mismatch": true, "model-refusal": true, "word-limit": true, "provider-unavailable": true, interrupted: true,
+  "schema-mismatch": true, "model-refusal": true, "word-limit": true, "chapter-short": true, "dialogue-share": true, "provider-unavailable": true, interrupted: true,
 };
+
+/** Maximum complete outline calls in one pass, including the initial call. */
+export const MAX_OUTLINE_ATTEMPTS = 3;
+
+/** Maximum complete continuation calls in one pass, including the initial call. */
+export const MAX_CONTINUATION_ATTEMPTS = 3;
 
 function titleFromDraft(draft: string, fallback: string): string {
   const m = /^#\s+(.+)$/m.exec(draft);
@@ -131,9 +138,21 @@ export async function runChapterPass(input: PassInput, deps: PassDeps): Promise<
       if (o.ok && s.ok) { outline = o.value; style = s.value; }
     }
     if (!outline || !style) {
-      const o = checkOutline(parseJsonText(await call("outline", { name: "outline", schema: OUTLINE_SCHEMA })), chapterNumber, bible, openBefore, deadBefore);
-      if (!o.ok) throw new PassError("schema-mismatch", "The outline did not pass the server checks.");
-      outline = o.value;
+      // The outline check is a cross-field rule (every beat must plant or pay
+      // off foreshadowing) that prose and JSON Schema cannot enforce through
+      // this provider: flash-lite left a beat bare in 7 of 7 live attempts
+      // (2026-11-08), and a bare `anyOf` schema is accepted but ignored.
+      // Retry the outline call at most MAX_OUTLINE_ATTEMPTS times inside the
+      // pass, feeding the exact check issues back, instead of failing the
+      // whole pass on the first miss.
+      let outlineIssues: readonly string[] | undefined;
+      for (let attempt = 0; attempt < MAX_OUTLINE_ATTEMPTS; attempt++) {
+        ctx.outlineIssues = outlineIssues;
+        const o = checkOutline(parseJsonText(await call("outline", { name: "outline", schema: OUTLINE_SCHEMA })), chapterNumber, bible, openBefore, deadBefore);
+        if (o.ok) { outline = o.value; break; }
+        outlineIssues = o.issues;
+      }
+      if (!outline) throw new PassError("schema-mismatch", "The outline did not pass the server checks.");
       emit({ event: "agent-complete", data: { runId, agent: "outline", output: outline } });
       ctx.outline = outline;
       const s = checkStyle(parseJsonText(await call("style", { name: "style", schema: STYLE_SCHEMA })), chapterNumber, lang, limits.styleAnchorMax);
@@ -144,9 +163,33 @@ export async function runChapterPass(input: PassInput, deps: PassDeps): Promise<
     ctx.outline = outline;
     ctx.style = style;
 
-    const draft = (await call("continuation")).trim();
-    const wordCount = countUnits(draft, lang);
-    if (wordCount > limits.chapterMax) throw new PassError("word-limit", `The draft has ${wordCount} ${limits.unitLabel}; the limit is ${limits.chapterMax}.`);
+    let wordCount = 0;
+    // The draft checks are server-side counts the model cannot see: a draft
+    // that is over the limit, under the length minimum, or under the dialogue
+    // minimum is retried in-pass (at most MAX_CONTINUATION_ATTEMPTS), feeding
+    // the exact measured numbers back, instead of burning a whole pass retry
+    // on each miss. Without the feedback the model re-rolls blind: a live zh
+    // run failed the chapter four times in a row at 0/16/25/13% dialogue
+    // (2026-11-08).
+    let continuationIssues: readonly string[] | undefined;
+    let lastError: PassError | undefined;
+    let acceptedDraft: string | undefined;
+    for (let attempt = 0; attempt < MAX_CONTINUATION_ATTEMPTS; attempt++) {
+      ctx.continuationIssues = continuationIssues;
+      const candidate = (await call("continuation")).trim();
+      const count = countUnits(candidate, lang);
+      const issues: string[] = [];
+      if (count > limits.chapterMax) issues.push(`The draft has ${count} ${limits.unitLabel}; the limit is ${limits.chapterMax}.`);
+      if (count < limits.chapterMin) issues.push(`The draft has ${count} ${limits.unitLabel}; at least ${limits.chapterMin} is required.`);
+      const dialogue = dialogueRatio(candidate, lang);
+      if (dialogue < limits.dialogueMin) issues.push(`The draft has ${Math.round(dialogue * 100)}% dialogue; at least ${Math.round(limits.dialogueMin * 100)}% is required.`);
+      if (issues.length === 0) { acceptedDraft = candidate; wordCount = count; break; }
+      continuationIssues = issues;
+      const code: ErrorCode = count > limits.chapterMax ? "word-limit" : count < limits.chapterMin ? "chapter-short" : "dialogue-share";
+      lastError = new PassError(code, issues.join(" "));
+    }
+    if (acceptedDraft === undefined) throw lastError ?? new PassError("schema-mismatch", "The continuation draft did not pass the server checks.");
+    const draft = acceptedDraft;
     emit({ event: "agent-complete", data: { runId, agent: "continuation", output: { draft, wordCount } } });
     ctx.draft = draft;
 

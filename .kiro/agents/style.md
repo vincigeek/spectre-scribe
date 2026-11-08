@@ -33,7 +33,9 @@ The style anchor translates numbers into writable guidance for one chapter:
   standard deviation.
 - Target dialogue share, from the dialogue ratio, and how dialogue should
   behave in this chapter's beats (for example, terse exchanges versus long
-  speeches).
+  speeches). The anchor's dialogue target must never fall below the
+  `dialogue_min` run parameter (default 25%): if the profile's dialogue ratio
+  is lower, raise the anchor target to the minimum and say so in `notes`.
 - Target pacing, from the pacing markers: how often em-dashes, ellipses, and
   short punchy sentences should appear, and where in the chapter they belong.
 - Target vocabulary range, from vocabulary richness and average word length:

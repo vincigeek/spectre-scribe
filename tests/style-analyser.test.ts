@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { analyseStyle, ANALYSER_VERSION, type WordSegmenter } from "@/lib/style-analyser";
+import { analyseStyle, dialogueRatio, ANALYSER_VERSION, type WordSegmenter } from "@/lib/style-analyser";
 import type { StyleProfile } from "@/lib/style-profile";
 import { parseStyleProfile } from "@/lib/style-profile";
 import { HAN, sentence, word, zhSentence } from "./fixtures";
@@ -145,6 +145,22 @@ describe("dialogue ratio (REQ-26c)", () => {
   it("counts dialogue that contains punctuation", () => {
     const p = profileOf(`${body}\n\n“${word(1)}! ${word(2)}?” ${word(3)}.`);
     expect(p.dialogueRatio).toBeCloseTo(2 / 203, 10);
+  });
+});
+
+describe("dialogueRatio export (REQ-20 draft check)", () => {
+  it("measures quoted words over all words in English", () => {
+    expect(dialogueRatio(`"Hello world" said she.`, "en")).toBe(0.5);
+    expect(dialogueRatio(`"Go."`, "en")).toBe(1);
+    expect(dialogueRatio(`No dialogue here.`, "en")).toBe(0);
+    expect(dialogueRatio(`"Unmatched opener`, "en")).toBe(0);
+    expect(dialogueRatio(``, "en")).toBe(0);
+  });
+  it("matches the profile ratio for Chinese dialogue", () => {
+    const zhBody = Array.from({ length: 20 }, (_, i) => zhSentence(20, i)).join("");
+    const text = `${zhBody}\n甲说：「乙丙『丁』。」戊。`;
+    expect(dialogueRatio(text, "zh")).toBe(profileOf(text).dialogueRatio);
+    expect(dialogueRatio(text, "zh")).toBeGreaterThan(0);
   });
 });
 

@@ -65,6 +65,10 @@ export type PassContext = {
   outline?: OutlineOutput;
   style?: StyleOutput;
   draft?: string;
+  /** Server-check issues from a failed outline attempt in this pass; fed back so the next attempt can fix them. */
+  outlineIssues?: readonly string[];
+  /** Server-check issues from a failed continuation draft in this pass; fed back so the next attempt can fix them. */
+  continuationIssues?: readonly string[];
 };
 
 export function runParametersBlock(ctx: Pick<PassContext, "chapterNumber" | "styleProfile">): string {
@@ -79,6 +83,9 @@ export function runParametersBlock(ctx: Pick<PassContext, "chapterNumber" | "sty
     `length_unit: ${lang === "zh" ? "字" : "word"}`,
     `logline_max: ${l.loglineMax}`,
     `style_anchor_max: ${l.styleAnchorMax}`,
+    `chapter_target: ${l.chapterTarget}`,
+    `chapter_min: ${l.chapterMin}`,
+    `dialogue_min: ${Math.round(l.dialogueMin * 100)}%`,
     `chapter_max: ${l.chapterMax}`,
     "Write all prose and free-text fields in the story language.",
     "Keep JSON keys, enum values, ids, and check ids in English.",
@@ -100,6 +107,23 @@ const TASKS: Readonly<Record<AgentName, string>> = {
   continuity: "Judge the draft and return APPROVED or VETO as strict JSON per your output contract.",
 };
 
+function continuationTask(ctx: PassContext): string {
+  const instructions = [TASKS.continuation];
+  const limits = LANGUAGE_LIMITS[ctx.styleProfile.language];
+  if (ctx.chapterNumber === 3) {
+    instructions.push(
+      `Chapter 3 is the payoff chapter: expand every outline beat into its own full scene. Give each payoff, resolution, and epiphany beat concrete action, dialogue, sensory detail, and a consequence; never compress a beat into a summary paragraph. Aim above chapter_min with a safety margin while staying below chapter_max.`,
+    );
+  }
+  if (ctx.continuationIssues && ctx.continuationIssues.length > 0) {
+    const repairTarget = Math.min(limits.chapterMax - 1, Math.ceil(limits.chapterMin * 1.1));
+    instructions.push(
+      `This is a server-check repair attempt. Return a complete replacement chapter, not a patch or commentary, and fix every listed check: ${ctx.continuationIssues.join(" ")} For a length-minimum failure, write at least ${repairTarget} ${limits.unitLabel} to leave a safety margin above chapter_min; for a dialogue failure, add substantive paired dialogue. Do not pad with repetition and do not exceed chapter_max.`,
+    );
+  }
+  return instructions.join(" ");
+}
+
 export function buildMessages(agent: AgentName, definition: string, ctx: PassContext): ChatMessage[] {
   const parts = [runParametersBlock(ctx), section("STYLE PROFILE", ctx.styleProfile), section("STORY BIBLE", ctx.bible)];
   parts.push(
@@ -110,10 +134,16 @@ export function buildMessages(agent: AgentName, definition: string, ctx: PassCon
   );
   if (ctx.ledger) parts.push(section("CONTINUITY LEDGER (last accepted states)", ctx.ledger));
   if (ctx.vetoNotes && ctx.vetoNotes.length > 0) parts.push(section("VETO NOTES FROM THE LAST PASS", ctx.vetoNotes));
+  if (agent === "outline" && ctx.outlineIssues && ctx.outlineIssues.length > 0) {
+    parts.push(section("OUTLINE CHECKS FAILED ON THE PREVIOUS ATTEMPT", ctx.outlineIssues));
+  }
+  if (agent === "continuation" && ctx.continuationIssues && ctx.continuationIssues.length > 0) {
+    parts.push(section("DRAFT CHECKS FAILED ON THE PREVIOUS ATTEMPT", ctx.continuationIssues));
+  }
   if (agent !== "outline" && ctx.outline) parts.push(section("OUTLINE", ctx.outline));
   if ((agent === "continuation" || agent === "continuity") && ctx.style) parts.push(section("STYLE ANCHOR", ctx.style));
   if (agent === "continuity" && ctx.draft !== undefined) parts.push(section("DRAFT", ctx.draft));
-  parts.push(`TASK: ${TASKS[agent]}`);
+  parts.push(`TASK: ${agent === "continuation" ? continuationTask(ctx) : TASKS[agent]}`);
   return [
     { role: "system", content: definition },
     { role: "user", content: parts.join("\n\n") },
@@ -212,6 +242,150 @@ export const CONTINUITY_SCHEMA = {
     },
   },
 } as const;
+
+/**
+ * Story-bible draft schemas (plan mode, outline agent contract).
+ * They cover the layer envelope and all shape constraints that do not depend on
+ * the seed or the other layer. The server checks the cross-field rules and the
+ * language-dependent limits again before returning a draft.
+ */
+const bibleText = { type: "string", minLength: 1, maxLength: 4000 } as const;
+const charId = { type: "string", pattern: "^char-[0-9]+$" } as const;
+const fsId = { type: "string", pattern: "^fs-[0-9]+$" } as const;
+const characterStatusEnum = { type: "string", enum: ["alive", "dead", "unknown"] } as const;
+
+export const BIBLE_CORE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["mode", "layer", "logline", "synopsis", "setting", "characters"],
+  properties: {
+    mode: { type: "string", enum: ["plan"] },
+    layer: { type: "string", enum: ["core"] },
+    logline: bibleText,
+    synopsis: { type: "array", items: bibleText, minItems: 5, maxItems: 5 },
+    setting: {
+      type: "object",
+      additionalProperties: false,
+      required: ["timePeriod", "locations", "worldRules"],
+      properties: {
+        timePeriod: bibleText,
+        locations: { type: "array", items: bibleText, minItems: 1, maxItems: 50 },
+        worldRules: { type: "array", items: bibleText, maxItems: 50 },
+      },
+    },
+    characters: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["id", "name", "role", "status", "description", "goal", "motivation", "conflict", "epiphany"],
+        properties: {
+          id: charId,
+          name: bibleText,
+          role: { type: "string", enum: ["protagonist", "antagonist", "supporting"] },
+          status: { type: "string", enum: ["alive"] },
+          description: bibleText,
+          goal: bibleText,
+          motivation: bibleText,
+          conflict: bibleText,
+          epiphany: bibleText,
+        },
+      },
+      minItems: 2,
+      maxItems: 4,
+    },
+  },
+} as const;
+
+function characterStatesSchema(characterIds?: readonly string[]) {
+  if (!characterIds) return { type: "object", additionalProperties: characterStatusEnum } as const;
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: [...characterIds],
+    properties: Object.fromEntries(characterIds.map((id) => [id, characterStatusEnum])),
+  } as const;
+}
+
+export const BIBLE_STRUCTURE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["mode", "layer", "foreshadowing", "timeline", "beatSheet"],
+  properties: {
+    mode: { type: "string", enum: ["plan"] },
+    layer: { type: "string", enum: ["structure"] },
+    foreshadowing: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["id", "description", "status"],
+        properties: {
+          id: fsId,
+          description: bibleText,
+          status: { type: "string", enum: ["open"] },
+        },
+      },
+      minItems: 2,
+      maxItems: 4,
+    },
+    timeline: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["chapterNumber", "event"],
+        properties: {
+          chapterNumber: { type: "integer", enum: [1, 2, 3] },
+          event: bibleText,
+        },
+      },
+      minItems: 3,
+      maxItems: 50,
+    },
+    beatSheet: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["chapterNumber", "title", "premise", "characterStates"],
+        properties: {
+          chapterNumber: { type: "integer", enum: [1, 2, 3] },
+          title: bibleText,
+          premise: bibleText,
+          characterStates: characterStatesSchema(),
+        },
+      },
+      minItems: 3,
+      maxItems: 3,
+    },
+  },
+} as const;
+
+/**
+ * Adds the accepted core's character ids to the structure schema. This keeps
+ * dynamic state-map keys closed for strict providers while the server still
+ * checks chapter coverage, duplicate ids, and state transitions.
+ */
+export function createBibleStructureSchema(characterIds: readonly string[]): Record<string, unknown> {
+  const beatSheet = BIBLE_STRUCTURE_SCHEMA.properties.beatSheet;
+  return {
+    ...BIBLE_STRUCTURE_SCHEMA,
+    properties: {
+      ...BIBLE_STRUCTURE_SCHEMA.properties,
+      beatSheet: {
+        ...beatSheet,
+        items: {
+          ...beatSheet.items,
+          properties: {
+            ...beatSheet.items.properties,
+            characterStates: characterStatesSchema(characterIds),
+          },
+        },
+      },
+    },
+  };
+}
 
 /** Parses model text as JSON, tolerating a ```json fence. */
 export function parseJsonText(text: string): unknown {

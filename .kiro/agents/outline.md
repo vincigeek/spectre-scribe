@@ -104,9 +104,7 @@ puts it into the story bible.
 - `foreshadowing` has two to four entries, all `open`. Each must be paid off by
   Chapter 3 in the plan.
 - `timeline` has at least one event per chapter, in cause-before-effect order.
-- Do not change the core layer. If the core layer cannot support a valid
-  structure, return `{"mode": "plan", "layer": "structure", "error": "..."}`
-  with a one-sentence reason.
+- Do not change the core layer.
 
 ## Chapter mode (one chapter's beats)
 
@@ -135,12 +133,45 @@ them. Return only this chapter's beats:
   and 3.
 - `beats` has at most 8 entries. Every beat names at least one character and at
   least one foreshadowing item it plants or pays off.
+- One character carries the chapter: the point-of-view character named in the
+  bible's `tone` (one protagonist per chapter, rotating). Most beats follow
+  that character; other characters appear only when the scene needs them. Do
+  not give every character one equal beat.
+- Beats alternate in tension: each beat's premise names its tension (rising
+  or falling), and no two consecutive beats sit at the same level. A chapter
+  that stays flat, or climbs without a breath, is a failed outline.
+- The last beat of Chapters 1 and 2 is a hook beat: it must introduce a
+  concrete new danger, revelation, or unanswered question, named in the
+  premise — not a mood, a summary, or "something approaches". The chapter
+  exists to earn that beat. Chapter 3's last beat is the resolution plus the
+  protagonist's epiphany, not a hook. The hook is a new development of an
+  EXISTING foreshadowing item, not a new thread: like every beat, the hook
+  beat must name at least one existing foreshadowing id in
+  `foreshadowingPlanted` or `foreshadowingPaidOff`. In Chapter 1 the hook
+  beat must PLANT a foreshadowing item and pay off none — that planted item
+  is the open thread the next chapter picks up. (Chapter 2's hook beat may
+  plant or pay off, as long as it names an existing item.)
+- A beat with both `foreshadowingPlanted` and `foreshadowingPaidOff` empty is
+  rejected, so check every beat before you answer. When you have more beats
+  than foreshadowing items, reuse an item: plant the same id in a later beat,
+  or pay off in a later beat an item planted earlier in the same chapter. A
+  beat that only changes tension without advancing a foreshadowing item is
+  still rejected — fold the tension change into a beat that plants or pays
+  off an item.
 - Chapter 1 beats plant at least one item that stays `open`. Chapter 2 beats
   contain at least one disaster or reversal beat. Chapter 3 beats pay off every
-  item that is still `open`.
+  item that is still `open`. Name the disaster or reversal beat plainly in its
+  title and premise (a 灾难, 危机, 反转, 背叛, 崩塌, 失败, 陷阱, or 逆转 — or
+  the English equivalent), so it is unmistakable; a beat whose disaster is only
+  implied does not count.
 - The beats follow this chapter's `beatSheet` premise and must not contradict
   the logline, the synopsis, or accepted chapters.
-- For a retry, return the full beat list again, not a partial patch.
+- For a retry, return the full beat list again, not a partial patch. The server
+  may send exact issues in an `OUTLINE CHECKS FAILED ON THE PREVIOUS ATTEMPT`
+  block. It permits at most three complete outline attempts in one pass when
+  deterministic outline checks fail. Only the latest check issues are fed into
+  the next attempt; this repair bound is separate from the user's chapter retry
+  count.
 
 ## Rules
 

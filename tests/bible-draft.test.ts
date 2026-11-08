@@ -85,6 +85,8 @@ describe("POST /api/bible/draft (T-11a)", () => {
     expect((await res.json()).draft.logline).toBe(coreDraft.logline);
     expect(calls).toHaveLength(1);
     expect(calls[0]!.tier).toBe("standard");
+    expect(calls[0]!.jsonSchema?.name).toBe("bible_core");
+    expect(calls[0]!.jsonSchema?.schema).toMatchObject({ required: ["mode", "layer", "logline", "synopsis", "setting", "characters"] });
     expect(calls[0]!.messages[1]!.content).toContain("mode: plan\nlayer: core");
   });
   it("drafts the structure layer from the accepted core", async () => {
@@ -92,6 +94,9 @@ describe("POST /api/bible/draft (T-11a)", () => {
     const res = await handleBibleDraftRequest(post({ layer: "structure", seed, styleProfile: profile, core }), { getClient: () => c, getOutlineDefinition: async () => "DEF", gate: null });
     expect(res.status).toBe(200);
     expect(calls[0]!.messages[1]!.content).toContain("APPROVED CORE LAYER");
+    const schema = calls[0]!.jsonSchema?.schema as { properties: { beatSheet: { items: { properties: { characterStates: { additionalProperties: unknown; required: string[] } } } } } };
+    expect(schema.properties.beatSheet.items.properties.characterStates.additionalProperties).toBe(false);
+    expect(schema.properties.beatSheet.items.properties.characterStates.required).toEqual(["char-1", "char-2", "char-3"]);
   });
   it("returns schema-mismatch with issues for a bad draft", async () => {
     const { c } = client(JSON.stringify({ ...coreDraft, synopsis: ["One."] }));

@@ -182,38 +182,55 @@ provider-specific token-limit field or equivalent Responses API request is
 translated inside this adapter, never in an agent wrapper. No provider response
 body, prompt, key, or credential-bearing URL is sent to the browser.
 
-Two model tiers (decided 2026-11-07): the standard model `LLM_MODEL` serves
-outline, style, and continuation; the premium model `LLM_MODEL_PREMIUM` serves
-continuity only, because it is the judge and benefits most from the stronger
-model. `LLM_MODEL_PREMIUM` is optional: when it is unset, `LLM_MODEL` serves
-continuity too. Initial values: standard `gemini-3.5-flash-lite`, premium
-`gemini-4-argon`. The premium model is slow (a trivial call measured ~48 s at
-default thinking) and expensive, so the orchestrator routes at most three
-premium calls per round (one per chapter) and the adapter sends the premium
-calls with the lowest thinking level the provider supports; a premium call that
-exceeds its per-call deadline fails that pass like any other provider error
-(retry rules in §2.4 apply, still capped at 3 retries). Argon-specific
-notes, verified 2026-11-07: thinking tokens bill as output; `temperature`,
-`top_p`, and `top_k` are ignored by this model, so the adapter must not send
-them on premium calls; the half-price introductory rate ($2 input / $10 output
-per 1M tokens) ends 2026-11-30 and doubles 2026-12-01 — budget at the
-December rate, since the submission deadline is 2026-12-05.
+Two model tiers (decided 2026-11-07, revised 2026-11-08): the standard model
+`LLM_MODEL` serves outline, style, and continuation; the premium model
+`LLM_MODEL_PREMIUM` serves continuity only, because it is the judge and
+benefits most from the stronger model. `LLM_MODEL_PREMIUM` is optional: when
+it is unset, `LLM_MODEL` serves continuity too. Current values: standard
+`gemini-3.5-flash-lite`, premium `gemini-3.5-flash`. Premium history: the seat
+was first held by `gemini-4-argon` (half-price $2 input / $10 output per 1M
+tokens to 2026-11-30, doubling 2026-12-01), retired 2026-11-08 after a real
+continuity call measured over 180 s against the 110 s pass deadline; the
+judge was briefly moved to the standard model, then `gemini-3.8-flash` was
+measured at 162–171 s for a trivial call (`reasoning_effort: minimal`
+rejected: "Thinking level MINIMAL is not supported for this model") and also
+rejected; `gemini-3.5-flash` measured 2 s for the same call and took the seat.
+Argon-specific notes, verified 2026-11-07, kept for reference: thinking
+tokens bill as output; `temperature`, `top_p`, and `top_k` are ignored by
+that model, so the adapter must not send them on premium calls.
 
 `PipelineOrchestrator` assembles a bounded context for one chapter. Every relay
 pass uses the following order:
 
 1. **Outline agent** (chapter mode) reads the named style profile, story bible
    snapshot, and accepted chapters, then produces a strict structured list of at
-   most eight beats for this chapter. It does not write final prose and does not
+   most eight beats for this chapter. One character carries the chapter (the
+   point-of-view character named in the bible's `tone`); most beats follow
+   that character and the others appear only when the scene needs them. It does not write final prose and does not
    restate the logline or synopsis. The Snowflake layers that build the logline,
    synopsis, characters, and beat sheet run earlier, in plan mode, when the bible
-   is drafted (§2.12). A chapter pass is one outline call.
+   is drafted (§2.12). A chapter pass starts with one outline call; if a
+   deterministic outline check fails, the server may make up to three complete
+   outline attempts total and feeds the latest check issues into the next
+   attempt. These in-pass repair attempts do not increment the user-visible
+   chapter retry count.
 2. **Style agent** reads those inputs plus the outline and produces a style anchor
    of at most 400 words (700 字 in Chinese). It targets the named quantitative metrics and does not
    need to complete the chapter.
 3. **Continuation agent** reads all previous inputs plus the style anchor and
-   produces a complete chapter draft of at most 800 words (1,500 字 in Chinese). Prose may be streamed
-   upstream, but the server retains and validates the complete text.
+   produces a complete chapter draft aimed at the soft generation target of 640
+   words (1,200 字 in Chinese), while never exceeding the hard maximum of 800
+   words (1,500 字 in Chinese), never falling below the 640-word (1,200 字)
+   minimum, and never falling below the 25% dialogue
+   minimum. Prose may be streamed upstream, but the server retains and
+   validates the complete text. Rhythm is part of the draft: sentence length
+   varies on purpose (short for urgency, longer for atmosphere), no three long
+   paragraphs in a row without a break, and the chapter ends on its hook beat
+   with nothing after it. A draft that fails a server-side count check
+   (over the limit, under the length minimum, or under the dialogue minimum) is retried in-pass at most
+   three continuation attempts total, feeding the exact measured numbers into
+   the next attempt; these in-pass repair attempts do not increment the
+   user-visible chapter retry count.
 4. **Continuity agent** reads all previous inputs plus the draft and returns
    `APPROVED` or `VETO` with structured failures. It does not rewrite the draft.
 
@@ -289,9 +306,19 @@ rewrites the prose.
 
 The outline agent tags each chapter with its arc role, and the beat sheet must
 carry it: Chapter 1 is setup plus hook, Chapter 2 is escalation, Chapter 3 is
-payoff. Continuity enforces the mechanical parts: after Chapter 1 at least one
-foreshadowing item must be `open`, and after Chapter 3 every foreshadowing item
-must be `paidOff` (Check C). The Chapter 2 escalation (a disaster or reversal
+payoff. Beats alternate in tension (rising/falling, named in each beat's
+premise, never two consecutive beats at the same level), and the last beat of
+Chapters 1 and 2 is a hook beat — a concrete new danger, revelation, or
+unanswered question, not a mood or summary. The hook is a new development of
+an EXISTING foreshadowing item, not a new thread: like every beat, it must
+name an existing foreshadowing id, and in Chapter 1 the hook beat must PLANT
+an item and pay off none, so the planted item stays open for the next chapter.
+Continuity enforces the mechanical
+parts: after Chapter 1 at least one foreshadowing item must be `open`, and
+after Chapter 3 every foreshadowing item must be `paidOff` (Check C); the
+chapter ending on its hook is enforced by the arc checks in
+`/.kiro/agents/continuity.md` (a chapter that ends on a summary, a mood, or a
+resolved beat is vetoed). The Chapter 2 escalation (a disaster or reversal
 beat) is enforced at outline validation: the Chapter 2 beats must contain at
 least one beat whose premise is a disaster or reversal. These are structural
 roles; they do not invent plot, names, or sample content, which remain TBD.
@@ -615,6 +642,8 @@ client whether a retry control may be offered.
 | `schema-mismatch` | Model output failed JSON/schema validation | Yes, as a chapter retry |
 | `model-refusal` | Model refused the request | Yes, as a chapter retry |
 | `word-limit` | Draft exceeded the server chapter limit (800 words or 1,500 字) | Yes, as a chapter retry |
+| `chapter-short` | Draft below the chapter length minimum (640 words or 1,200 字) | Yes, as a chapter retry |
+| `dialogue-share` | Draft dialogue below the 30% minimum (REQ-20) | Yes, as a chapter retry |
 | `retry-exhausted` | Chapter retry cap (3) reached | No; edit or start a new session |
 | `interrupted` | Stream aborted or stale run after reload | Yes, as resume/retry |
 | `access-required` | Live mode needs a valid demo access code (HTTP 401) | No; enter the code or watch a replay |
@@ -648,11 +677,24 @@ server count always agree.
 | Minimum sample | 200 words | 400 字 |
 | Logline maximum | 15 words | 30 字 |
 | Style anchor maximum | 400 words | 700 字 |
-| Chapter maximum | 800 words | 1,500 字 |
+| Chapter generation target (soft) | 640 words | 1,200 字 |
+| Chapter minimum (REQ-20) | 640 words | 1,200 字 |
+| Dialogue minimum (REQ-20) | 25% | 25% |
+| Dialogue target (soft) | 25–35% | 25–35% |
+| Chapter maximum (REQ-20) | 800 words | 1,500 字 |
 | Outline output cap | 600 tokens | 1,000 tokens |
 | Style output cap | 900 tokens | 1,500 tokens |
 | Continuation output cap | 1,600 tokens | 2,600 tokens |
 | Continuity output cap | 800 tokens | 1,300 tokens |
+
+The chapter generation target is 80% of the language-specific maximum, and the
+same number is the enforced length minimum (`chapter_min`): a draft below it
+is rejected with the `chapter-short` error code, retryable as a chapter retry.
+The server enforces the hard maximum with the existing `word-limit` retry
+behavior for over-limit drafts. The dialogue minimum is likewise a hard
+acceptance check. The server recounts dialogue share with the same
+paired-delimiter measure as the style profile (REQ-26c) and rejects a draft
+below 30% with the `dialogue-share` error code, retryable as a chapter retry.
 
 The `zh` token caps are about 1.6 times the `en` caps. They are a starting guess,
 because tokens per 字 differ between model tokenizers.
@@ -703,6 +745,9 @@ story_language: zh
 length_unit: 字
 logline_max: 30
 style_anchor_max: 700
+chapter_target: 1200
+chapter_min: 1200
+dialogue_min: 25%
 chapter_max: 1500
 Write all prose and free-text fields in the story language.
 Keep JSON keys, enum values, ids, and check ids in English.
@@ -712,7 +757,11 @@ This block takes precedence over a number written in an agent file, such as "at
 most 800 words". The style agent reads the eight metrics in the profile's unit,
 so a `zh` sentence-length mean of 28 means 28 字. Server validation does not trust
 the model to count: the orchestrator recounts with `countUnits` and rejects an
-over-limit draft with the `word-limit` error code.
+over-limit draft with the `word-limit` error code, and recounts dialogue share
+with the profile's paired-delimiter measure and rejects a draft below 25% with
+the `dialogue-share` error code. The continuation prompt aims for a dialogue
+share between 25% and 35%; the 35% end is a soft target, not an acceptance
+check, so a draft above it is not rejected.
 
 **Field mapping.** The style agent's `targets` object uses longer names than the
 profile. The orchestrator maps them one to one:
@@ -853,9 +902,10 @@ check, so a locked-out IP gets 429 even with a valid code. The lock is the key
 | Draft layers per UTC day, all users | 60 |
 | Wrong codes per IP per 10 min | 10 |
 
-A chapter pass makes at most 4 agent calls plus at most 1 transport retry each,
-so at most 8 calls. A draft layer makes 1 call plus at most 1 retry, so at most 2.
-The daily budget bounds model calls at 60 × 8 + 60 × 2 = 600. Premium calls are
+A chapter pass makes at most 6 agent calls (three outline attempts plus style,
+continuation, and continuity) plus at most 1 transport retry each, so at most 12
+provider calls. A draft layer makes 1 call plus at most 1 retry, so at most 2.
+The daily budget bounds model calls at 60 × 12 + 60 × 2 = 840. Premium calls are
 at most 2 per pass, so at most 120 per day (60 without transport retries).
 
 **Counter store.** Serverless instances do not share memory, so Production uses
