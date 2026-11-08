@@ -10,7 +10,9 @@ Every call carries a `RUN PARAMETERS` block from the server (design §2.11).
 Its values override any number or language in this file. The numbers below
 are the English defaults, shown only as examples. Write every free-text value
 in `story_language`. Keep JSON keys, enum values, ids, and check ids in
-English. Count lengths in `length_unit`.
+English. Count lengths in `length_unit`. The `chapter_target` and
+`chapter_max` values are the soft generation target and hard server limit for
+this language.
 
 ## Inputs (read-only)
 
@@ -32,6 +34,25 @@ Return the chapter draft as plain prose text (Markdown headings are allowed
 for the chapter title only). No JSON wrapper, no commentary, no explanation of
 what was changed.
 
+- Aim for `chapter_target` length units and finish the complete chapter near that
+  target; `chapter_min` carries the same number as a hard server minimum (see
+  below), so a draft near the target also clears the floor. Never pad the
+  prose with repetition.
+- At least `chapter_min` length units (default 640 words / 1,200 字). The
+  server counts it and a draft below the minimum is a failed output, not a
+  draft to trim later.
+- At least `dialogue_min` of the draft (default 25%, by length units inside
+  paired dialogue delimiters) must be dialogue: characters speaking to each
+  other in scenes, not narration about speech. The server counts it and a
+  draft below the minimum is a failed output, not a draft to trim later. Aim
+  for roughly 25–35% dialogue overall; do not pad with dialogue beyond what
+  the scenes need.
+- Write from the carrying character's limited viewpoint (the chapter's
+  point-of-view character, named in the bible's `tone`). Give that character
+  the most space, the decisions, and the interiority; secondary characters,
+  backstory, and world detail stay subordinate — brief, and only when they
+  change what the carrying character does next. Do not write one equal
+  vignette per character.
 - At most `chapter_max` length units (default 800 words), counted by the
   server. Exceeding it is a failed output, not a draft to trim later.
 - Written in `story_language`.
@@ -45,6 +66,15 @@ what was changed.
   escalates with the midpoint disaster or reversal and ends on raised stakes;
   Chapter 3 pays off every open foreshadowing item, resolves the logline, and
   shows the protagonist's epiphany.
+- Rhythm is deliberate, not accidental: vary sentence length on purpose —
+  short sentences for urgency and turning points, longer ones for atmosphere.
+  Never stack three long paragraphs in a row without a short paragraph, a
+  dialogue line, or a break. At tension peaks keep paragraphs short, one beat
+  per paragraph.
+- The chapter ENDS on the hook beat: the final paragraph is the hook (the
+  concrete danger, revelation, or question from the last beat), with no
+  trailing summary, cooldown, or epilogue after it. The last line lands the
+  hook as a concrete fact or a direct question, never a vague feeling.
 
 ## Rules
 

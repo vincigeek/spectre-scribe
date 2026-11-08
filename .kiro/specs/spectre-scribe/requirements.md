@@ -167,6 +167,14 @@ REQ-09: Chapters SHALL be produced one at a time through four server-side agents
         agents through the run-parameters block of REQ-27, which takes
         precedence over a length stated in an agent file.
 
+        Each chapter follows one carrying character: the point-of-view
+        character named in the story bible's `tone` (one protagonist per
+        chapter, rotating). The outline SHALL build most beats around that
+        character, and the continuation SHALL write from their limited
+        viewpoint, giving them the most space, decisions, and interiority;
+        other characters, backstory, and world detail stay subordinate and
+        appear only as they bear on the carrying character's present thread.
+
 REQ-10: If the continuity agent vetoes a draft, the server pipeline SHALL loop
         back to the outline agent, or to the continuation agent when the user has
         selected that retry option, with the veto notes appended as context. A
@@ -254,8 +262,20 @@ REQ-19: The full flow, including sample analysis and all 3 chapters with no
         chapter. The target applies to both English and Chinese runs.
 
 REQ-20: No generated chapter SHALL exceed the chapter limit of REQ-24 (800 words
-        for English, 1,500 字 for Chinese). The server SHALL validate this limit,
-        counted in the language's length unit, before accepting a chapter.
+        for English, 1,500 字 for Chinese). The continuation prompt SHALL include
+        a soft generation target at 80% of that language's maximum (640 words,
+        1,200 字). The server SHALL validate the hard maximum and the minimum
+        below, counted in the language's length unit, before accepting a
+        chapter. Every
+        generated chapter SHALL contain at least 640 words (1,200 字 for
+        Chinese), counted in the language's length unit; the server SHALL
+        validate this minimum and reject a draft below it as a retryable
+        chapter error. Every
+        generated chapter SHALL contain at least 25% dialogue, measured as
+        length units inside paired dialogue delimiters (REQ-26c) over all length
+        units; the server SHALL validate this minimum and reject a draft below
+        it as a retryable chapter error. The continuation prompt SHALL aim for
+        a dialogue share between 25% and 35%.
 
 REQ-21: Active session data SHALL live in React state and be restored from
         `localStorage`. The session SHALL include a derived continuity ledger
@@ -293,6 +313,10 @@ REQ-24: The system SHALL support samples and generated stories in English (`en`)
         | Minimum sample | 200 | 400 |
         | Logline maximum | 15 | 30 |
         | Style anchor maximum | 400 | 700 |
+        | Chapter generation target (soft) | 640 | 1,200 |
+        | Chapter minimum (REQ-20) | 640 | 1,200 |
+        | Dialogue minimum (REQ-20) | 25% | 25% |
+        | Dialogue target (soft) | 25–35% | 25–35% |
         | Chapter maximum (REQ-20) | 800 | 1,500 |
 
         The `zh` values are initial values, to be tuned against measured output

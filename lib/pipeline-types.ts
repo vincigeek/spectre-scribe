@@ -85,6 +85,8 @@ export const ERROR_CODES = {
   "schema-mismatch": { retryable: true, message: "An agent returned output in the wrong shape." },
   "model-refusal": { retryable: true, message: "The model refused this request." },
   "word-limit": { retryable: true, message: "The draft was over the chapter limit." },
+  "chapter-short": { retryable: true, message: "The draft is below the chapter length minimum." },
+  "dialogue-share": { retryable: true, message: "The draft has too little dialogue." },
   "retry-exhausted": { retryable: false, message: "This chapter used all 3 retries. Edit the bible or start a new session." },
   interrupted: { retryable: true, message: "The run was interrupted." },
   "access-required": { retryable: false, message: "Live mode needs a demo access code." },

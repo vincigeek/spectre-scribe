@@ -6,7 +6,7 @@ import { handlePipelineRequest, parsePipelineRequest } from "@/lib/server/pipeli
 import { profileToTargets } from "@/lib/server/prompts";
 import { createSseParser, formatSse, parseSseData, type SseRecord } from "@/lib/sse";
 import { analyseStyle } from "@/lib/style-analyser";
-import { sentence } from "./fixtures";
+import { longDialogueDraft, sentence } from "./fixtures";
 import { acceptedChapter, validBible } from "./fixtures-bible";
 
 const profile = (() => { const r = analyseStyle(Array.from({ length: 21 }, (_, i) => sentence(10, i * 10)).join(" ")); if (!r.ok) throw new Error("x"); return r.profile; })();
@@ -15,8 +15,7 @@ const outline = { mode: "chapter", chapterNumber: 1, arcRole: "setup-hook", beat
 const replies: Record<string, string> = {
   OUTLINE: JSON.stringify(outline),
   STYLE: JSON.stringify({ chapterNumber: 1, anchor: "G.", notes: [], targets: profileToTargets(profile) }),
-  CONT: "Draft prose.",
-  JUDGE: JSON.stringify({ chapterNumber: 1, status: "APPROVED", failures: [] }),
+  CONT: longDialogueDraft(),  JUDGE: JSON.stringify({ chapterNumber: 1, status: "APPROVED", failures: [] }),
 };
 const client = { endpoint: "x", chat: async (r: ChatRequest) => ({ ok: true as const, content: replies[r.messages[0]!.content]!, model: "m", transportRetries: 0 }) } as unknown as ModelClient;
 const deps = { getClient: () => client, getDefinitions: async () => defs, gate: null };

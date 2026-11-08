@@ -25,3 +25,13 @@ export const HAN = "甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉
 export function zhSentence(n: number, offset = 0): string {
   return `${Array.from({ length: n }, (_, k) => HAN[(offset + k) % HAN.length]).join("")}。`;
 }
+
+/**
+ * A draft that clears the length minimum (640 words) and the 30% dialogue
+ * minimum: 60 repeats of a two-line spoken exchange under a title heading
+ * (662 words, ~99% dialogue). Reuse wherever a pass must accept.
+ */
+export function longDialogueDraft(title = "A Title"): string {
+  const line = `"We must go now," she said. "The countdown is already running."`;
+  return `# ${title}\n\n${Array.from({ length: 60 }, () => line).join(" ")}`;
+}

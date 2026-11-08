@@ -70,7 +70,7 @@ export function checkOutline(
     b.foreshadowingPaidOff.forEach((x) => paid.add(x));
   });
   if (chapterNumber === 1 && ![...planted].some((id) => !paid.has(id))) {
-    issues.push("chapter 1 must leave at least one foreshadowing item open");
+    issues.push("chapter 1 must leave at least one foreshadowing item open — make the last beat plant (not pay off) an item");
   }
   if (chapterNumber === 2 && !beats.some((b) => isRecord(b) && DISASTER.test(`${b.title} ${b.premise}`))) {
     issues.push("chapter 2 needs a disaster or reversal beat");

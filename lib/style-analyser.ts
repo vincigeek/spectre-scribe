@@ -98,6 +98,19 @@ function dialogueUnitsInParagraph(paragraph: string, language: Language): number
   return countUnits(inside, language);
 }
 
+/**
+ * Share of length units inside paired dialogue delimiters (REQ-26c), for a
+ * whole text. Same measure as the profile's `dialogueRatio`: closed pairs
+ * only, an opener left unmatched at the end of a paragraph covers nothing.
+ * The server uses it to enforce the dialogue minimum on drafts (REQ-20).
+ */
+export function dialogueRatio(text: string, language: Language): number {
+  const units = countUnits(text, language);
+  if (units === 0) return 0;
+  const dialogueUnits = splitParagraphs(text, language).reduce((acc, p) => acc + dialogueUnitsInParagraph(p, language), 0);
+  return Math.min(1, dialogueUnits / units);
+}
+
 function normaliseToken(token: string): string {
   return token.toLowerCase().replace(/['’-]/g, "");
 }
@@ -155,8 +168,6 @@ export function analyseStyle(sampleText: string, options: AnalyseOptions = {}): 
   const sentenceLengths = sentences.map((s) => countUnits(s.text, language));
   const paragraphLengths = paragraphs.map((p) => countUnits(p, language));
 
-  const dialogueUnits = paragraphs.reduce((acc, p) => acc + dialogueUnitsInParagraph(p, language), 0);
-
   const segmenter = options.segmenter === undefined ? (language === "zh" ? defaultZhSegmenter() : null) : options.segmenter;
   const { tokens, segmentation } = tokenise(text, language, segmenter);
   const contentTokens = tokens.filter((t) => !isStopword(t, language));
@@ -170,7 +181,7 @@ export function analyseStyle(sampleText: string, options: AnalyseOptions = {}): 
     sentenceLenMean: mean(sentenceLengths),
     sentenceLenSD: populationSD(sentenceLengths),
     typeTokenRatio: tokens.length === 0 ? 0 : new Set(tokens).size / tokens.length,
-    dialogueRatio: Math.min(1, dialogueUnits / units),
+    dialogueRatio: dialogueRatio(text, language),
     pacingMarkers: {
       emDash: per100(countRuns(text, EM_DASH_RUN), units),
       ellipsis: per100(countRuns(text, ELLIPSIS_RUN), units),

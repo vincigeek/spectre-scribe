@@ -4,9 +4,14 @@ Role in the Spectre Scribe relay: judge the continuation draft against the
 story bible, the outline, and previously accepted chapters, and return
 `APPROVED` or `VETO`. This agent judges. It never rewrites the prose.
 
-Model tier: premium (`LLM_MODEL_PREMIUM`, initially `gemini-4-argon`) — this
-is the only agent on the premium model; outline, style, and continuation run
-on the standard model. See design §2.4 for routing and the premium call rules.
+Model tier: premium (`LLM_MODEL_PREMIUM`, `gemini-3.5-flash`) — this is the
+only agent on the premium model; outline, style, and continuation run on the
+standard model. See design §2.4 for routing and the premium call rules.
+(Premium history: `gemini-4-argon` served continuity until 2026-11-08, when a
+real call measured over 180 s against the 110 s pass deadline; the judge was
+briefly moved to the standard model, then `gemini-3.8-flash` was measured at
+162–171 s for a trivial call and rejected; `gemini-3.5-flash` measured 2 s
+for the same call and took the judge seat.)
 
 ## Run parameters
 
@@ -63,6 +68,10 @@ say is paid off must actually be paid off in the prose.
   draft must contain it.
 - After Chapter 3, every foreshadowing item must be `paidOff`, the logline
   must be resolved, and the protagonist's epiphany must appear in the prose.
+- Chapters 1 and 2 must END on the hook: the final beat's outcome is
+  unresolved — a concrete danger, revelation, or unanswered question. A
+  chapter that ends on a summary, a mood, or a resolved beat fails this
+  check, even if every other check passes.
 
 ## Output contract
 
