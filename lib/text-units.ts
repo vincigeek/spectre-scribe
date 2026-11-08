@@ -19,10 +19,11 @@ export type LanguageLimits = {
   styleAnchorMax: number;
   /** Soft generation target with a 10% safety margin above `chapterMin`. */
   chapterTarget: number;
-  /** Minimum draft length (0..chapterMax); the server rejects below it. */
+  /** Minimum draft length; the server rejects below it. */
   chapterMin: number;
   /** Minimum dialogue share of a generated draft (0..1); the server rejects below it. */
   dialogueMin: number;
+  /** Soft upper guidance for generation; the server does not reject a draft above it. */
   chapterMax: number;
 };
 
@@ -36,7 +37,7 @@ export const LANGUAGE_LIMITS: Readonly<Record<Language, Readonly<LanguageLimits>
     chapterTarget: 704,
     chapterMin: 640,
     dialogueMin: 0.25,
-    chapterMax: 800,
+    chapterMax: 960,
   }),
   zh: Object.freeze({
     lengthUnit: "char",
@@ -47,7 +48,7 @@ export const LANGUAGE_LIMITS: Readonly<Record<Language, Readonly<LanguageLimits>
     chapterTarget: 1320,
     chapterMin: 1200,
     dialogueMin: 0.25,
-    chapterMax: 1500,
+    chapterMax: 1800,
   }),
 });
 

@@ -120,7 +120,7 @@ validated request
   -> style
   -> continuation
   -> continuity
-  -> APPROVED + within chapter limit (800 words / 1,500 字)
+  -> APPROVED + chapter minimum and dialogue floor pass (soft guidance: 960 words / 1,800 字)
   -> accepted chapter
 ```
 

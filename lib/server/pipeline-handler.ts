@@ -8,7 +8,6 @@ import { MAX_RETRIES, type AcceptedChapter, type ContinuityFailure } from "@/lib
 import { formatSse, KEEP_ALIVE } from "@/lib/sse";
 import { parseStoryBible, type CharacterStatus, type ForeshadowingStatus } from "@/lib/story-bible";
 import { parseStyleProfile } from "@/lib/style-profile";
-import { countUnits } from "@/lib/text-units";
 import { loadAgentDefinitions, type AgentDefinitions } from "./agent-loader";
 import { loadModelConfig } from "./config";
 import { refusalResponse, sharedLiveGate, type LiveGate } from "./live-gate";
@@ -70,7 +69,6 @@ export function parsePipelineRequest(body: unknown): ParsedRequest {
   const accepted: AcceptedChapter[] = [];
   for (const [i, c] of chapters.entries()) {
     if (!isRecord(c) || c.chapterNumber !== i + 1 || typeof c.prose !== "string" || typeof c.title !== "string") return bad("An accepted chapter is invalid.");
-    if (countUnits(c.prose, p.value.language) > (p.value.language === "zh" ? 1500 : 800)) return bad("An accepted chapter is over the limit.");
     accepted.push(structuredClone(c) as AcceptedChapter);
   }
 

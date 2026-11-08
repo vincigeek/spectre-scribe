@@ -11,8 +11,8 @@ import { HAN, sentence, zhSentence } from "./fixtures";
 
 describe("LANGUAGE_LIMITS", () => {
   it("matches REQ-24", () => {
-    expect(LANGUAGE_LIMITS.en).toMatchObject({ lengthUnit: "word", minSample: 200, loglineMax: 15, styleAnchorMax: 400, chapterTarget: 704, chapterMin: 640, dialogueMin: 0.25, chapterMax: 800 });
-    expect(LANGUAGE_LIMITS.zh).toMatchObject({ lengthUnit: "char", minSample: 400, loglineMax: 30, styleAnchorMax: 700, chapterTarget: 1320, chapterMin: 1200, dialogueMin: 0.25, chapterMax: 1500 });
+    expect(LANGUAGE_LIMITS.en).toMatchObject({ lengthUnit: "word", minSample: 200, loglineMax: 15, styleAnchorMax: 400, chapterTarget: 704, chapterMin: 640, dialogueMin: 0.25, chapterMax: 960 });
+    expect(LANGUAGE_LIMITS.zh).toMatchObject({ lengthUnit: "char", minSample: 400, loglineMax: 30, styleAnchorMax: 700, chapterTarget: 1320, chapterMin: 1200, dialogueMin: 0.25, chapterMax: 1800 });
     expect(LANGUAGE_LIMITS.en.chapterTarget / LANGUAGE_LIMITS.en.chapterMax).toBe(LANGUAGE_LIMITS.zh.chapterTarget / LANGUAGE_LIMITS.zh.chapterMax);
   });
   it("is frozen", () => {

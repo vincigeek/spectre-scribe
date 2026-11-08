@@ -116,12 +116,12 @@ Initial output budgets are deliberately bounded and must be constants covered by
 | --- | ---: | --- |
 | Outline | 600 output tokens | No more than eight beats; structured outline only |
 | Style | 900 output tokens | Style anchor no more than 400 words |
-| Continuation | 1,600 output tokens | Final chapter text no more than 800 words |
+| Continuation | 1,600 output tokens | Aim for the soft chapter guidance; enforce only the chapter minimum and dialogue floor |
 | Continuity | 800 output tokens | `APPROVED` or structured `VETO`; no prose rewrite |
 
 The table shows English values. Chinese runs use about 1.6 times the token caps (outline
 1,000, style 1,500, continuation 2,600, continuity 1,300) and the Chinese length limits in
-`requirements.md` REQ-24 (anchor 700 字, chapter 1,500 字). These are starting values; tune them
+`requirements.md` REQ-24 (anchor 700 字, soft chapter guidance 1,800 字). These are starting values; tune them
 in the performance task.
 
 The compatible client must use the token-limit field accepted by the selected provider and
@@ -135,7 +135,7 @@ model calls after local analysis.
 Each outbound call has an `AbortSignal` and a deadline. Retry only a transient connection,
 408, 429, 500, 502, 503, or 504 failure, honor `Retry-After` when present, cap the wait, and
 allow at most one transport retry when the route budget permits it. Do not retry
-authentication, permission, malformed-request, schema, refusal, or word-limit failures.
+authentication, permission, malformed-request, schema, refusal, or legacy word-limit failures.
 Transport retries are separate from the user-visible chapter retry count, but both are
 included in performance and cost measurements.
 

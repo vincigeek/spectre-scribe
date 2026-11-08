@@ -1,7 +1,7 @@
 /**
  * One chapter relay pass (design §2.4, §2.6; task T-15).
  * Fixed order outline -> style -> continuation -> continuity. A chapter is accepted
- * only on APPROVED plus the server length check. Events are emitted through `emit`
+ * only on APPROVED plus the server minimum-length and dialogue checks. Events are emitted through `emit`
  * so the SSE route (T-16) and tests share one code path.
  */
 import "server-only";
@@ -165,12 +165,12 @@ export async function runChapterPass(input: PassInput, deps: PassDeps): Promise<
 
     let wordCount = 0;
     // The draft checks are server-side counts the model cannot see: a draft
-    // that is over the limit, under the length minimum, or under the dialogue
-    // minimum is retried in-pass (at most MAX_CONTINUATION_ATTEMPTS), feeding
-    // the exact measured numbers back, instead of burning a whole pass retry
-    // on each miss. Without the feedback the model re-rolls blind: a live zh
-    // run failed the chapter four times in a row at 0/16/25/13% dialogue
-    // (2026-11-08).
+    // under the length minimum or under the dialogue minimum is retried in-pass
+    // (at most MAX_CONTINUATION_ATTEMPTS), feeding the exact measured numbers
+    // back, instead of burning a whole pass retry on each miss. The chapterMax
+    // value is generation guidance only, so a complete draft may exceed it.
+    // Without the feedback the model re-rolls blind: a live zh run failed the
+    // chapter four times in a row at 0/16/25/13% dialogue (2026-11-08).
     let continuationIssues: readonly string[] | undefined;
     let lastError: PassError | undefined;
     let acceptedDraft: string | undefined;
@@ -179,13 +179,12 @@ export async function runChapterPass(input: PassInput, deps: PassDeps): Promise<
       const candidate = (await call("continuation")).trim();
       const count = countUnits(candidate, lang);
       const issues: string[] = [];
-      if (count > limits.chapterMax) issues.push(`The draft has ${count} ${limits.unitLabel}; the limit is ${limits.chapterMax}.`);
       if (count < limits.chapterMin) issues.push(`The draft has ${count} ${limits.unitLabel}; at least ${limits.chapterMin} is required.`);
       const dialogue = dialogueRatio(candidate, lang);
       if (dialogue < limits.dialogueMin) issues.push(`The draft has ${Math.round(dialogue * 100)}% dialogue; at least ${Math.round(limits.dialogueMin * 100)}% is required.`);
       if (issues.length === 0) { acceptedDraft = candidate; wordCount = count; break; }
       continuationIssues = issues;
-      const code: ErrorCode = count > limits.chapterMax ? "word-limit" : count < limits.chapterMin ? "chapter-short" : "dialogue-share";
+      const code: ErrorCode = count < limits.chapterMin ? "chapter-short" : "dialogue-share";
       lastError = new PassError(code, issues.join(" "));
     }
     if (acceptedDraft === undefined) throw lastError ?? new PassError("schema-mismatch", "The continuation draft did not pass the server checks.");

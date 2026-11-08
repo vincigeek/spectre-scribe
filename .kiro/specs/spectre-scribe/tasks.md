@@ -157,11 +157,13 @@ must not be edited.
 
 - [x] **T-15** Implement `lib/pipeline/orchestrator.ts` for one chapter pass.
       Enforce the outline, style, continuation, continuity order; keep the style
-      anchor at most 400 words (700 字 in Chinese); enforce a final draft limit of
-      800 words (1,500 字 in Chinese), recounted with `countUnits`; and
-      accept a chapter only on `APPROVED`. On `VETO`, return structured failures
-      without rewriting the draft. Permit the first attempt plus at most 3
-      additional retries, and reject a fourth retry.
+      anchor at most 400 words (700 字 in Chinese); pass the recommended draft
+      guidance of 960 words (1,800 字 in Chinese) to prompts without rejecting a
+      complete draft above it; enforce the 640-word (1,200 字) minimum and 25%
+      dialogue floor with `countUnits`; and accept a chapter only on `APPROVED`
+      plus those hard checks. On `VETO`, return structured failures without
+      rewriting the draft. Permit the first attempt plus at most 3 additional
+      retries, and reject a fourth retry.
       *(REQ-09, REQ-10, REQ-14, REQ-20)*
 
 - [x] **T-16** Implement `app/api/pipeline/stream/route.ts` as an SSE Route
@@ -274,9 +276,12 @@ must not be edited.
       against the measured output.
       *(REQ-19, REQ-24)*
 
-- [x] **T-26** Verify that the server rejects any accepted draft over the chapter limit (800 words / 1,500 字),
+- [x] **T-26** Verify that the server accepts a complete draft above the soft
+      chapter guidance (960 words / 1,800 字) when the chapter minimum and
+      dialogue floor pass, including the 1,589 字 Chinese regression case; verify
       a fourth chapter request, a fourth retry, an invalid story bible, and an
-      unconfigured model endpoint. Verify that no sample retrieval, database
+      unconfigured model endpoint are rejected. Verify that the legacy
+      `word-limit` code remains compatible and that no sample retrieval, database
       write, credential log, or client-side secret exposure exists.
       *(REQ-03, REQ-18, REQ-20, REQ-21, REQ-22)*
 
@@ -367,7 +372,7 @@ must not be edited.
 | AC-05 | Continuity flags dead-character, timeline-order, and foreshadowing-payoff failures | T-18, T-19, T-20 |
 | AC-06 | A chapter can use at most 3 retries after the first attempt, and a further retry is rejected | T-15, T-17, T-22 |
 | AC-07 | The demo accepts exactly 3 chapters and blocks a fourth | T-22, T-23, T-26 |
-| AC-08 | No accepted chapter exceeds its language limit (800 words / 1,500 字) | T-15, T-22, T-26 |
+| AC-08 | Every accepted chapter passes its language minimum and dialogue floor; it may exceed the soft chapter guidance of 960 words / 1,800 字 | T-15, T-22, T-26 |
 | AC-09 | A no-retry run of sample analysis plus 3 chapters completes within 3 minutes | T-25, T-27 |
 | AC-10 | Progress and agent output stream through SSE while model access remains server-only | T-05, T-13, T-16, T-21 |
 | AC-11 | The story bible downloads as JSON and chapters/full story download as Markdown | T-12, T-23, T-24 |

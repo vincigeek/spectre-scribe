@@ -41,8 +41,10 @@ These rules are product constraints, not suggestions:
   payoff. Foreshadowing status is `open`, `paidOff`, or `deferred`; a deferred item names
   its target chapter, and an open item must be paid off by chapter 3.
 - The demo accepts exactly 3 chapters. A chapter is accepted only after a continuity
-  `APPROVED` result and a server-side length count within the chapter limit (800 words
-  for English, 1,500 字 for Chinese).
+  `APPROVED` result and server-side checks that the chapter meets the language-specific
+  minimum length and 25% dialogue floor. The recommended chapter maximum is 960 words
+  for English and 1,800 字 for Chinese; exceeding that soft guidance alone does not reject
+  a complete draft.
 - Chapter arc roles are structural, not plot content (the plot, names, and sample
   remain TBD). Chapter 1 establishes the protagonist's goal and conflict, plants at
   least one open foreshadowing item, and ends on a hook or question. Chapter 2
@@ -175,8 +177,9 @@ authority when a feature request conflicts with it.
   limited per IP and per day (REQ-32).
 - **Run the four-agent relay.** Draft exactly 3 chapters, one at a time, in
   the fixed order `outline -> style -> continuation -> continuity`, streamed
-  over SSE with visible progress. Each chapter is at most 800 words (1,500 字 in
-  Chinese).
+  over SSE with visible progress. Each chapter aims for 960 words (1,800 字 in
+  Chinese) or less as soft guidance; a complete draft may exceed that guidance
+  when its minimum length and dialogue floor pass.
 - **Check continuity.** Enforce the three checks (character alive/dead,
   timeline order, foreshadowing payoff) plus the chapter arc roles, before any
   chapter is accepted. A `VETO` names the failing check, the violated bible
@@ -207,9 +210,10 @@ authority when a feature request conflicts with it.
   novel text or any third-party literary text. The sample comes only from the
   user. The raw sample is not sent to model calls after local analysis and is
   not stored on the server.
-- **No long-form writing.** No more than 3 chapters, no chapter over the 800-word (1,500 字 in Chinese)
-  limit, no fourth chapter, no series, no multi-book bible, no novel-length
-  manuscript.
+- **No long-form writing.** No more than 3 chapters, no unbounded retries, no fourth
+  chapter, no series, no multi-book bible, and no novel-length manuscript. Chapter
+  generation uses 960 words (1,800 字 in Chinese) as soft maximum guidance; the
+  server does not reject a complete draft solely for exceeding it.
 - **No open-ended assistant.** No general chatbot, no free-form writing
   companion, no brainstorming chat, no editing of arbitrary user text outside
   the relay. The four agents only do their one relay job, in the fixed order;
@@ -261,7 +265,8 @@ Out of scope:
 - invented demo content in specifications or defaults;
 - crawling or retrieval of third-party literary text;
 - user accounts, authentication, billing, database storage, queues, or background jobs;
-- more than three chapters, chapters over the language chapter limit (800 words or 1,500 字), or unbounded retries;
+- more than three chapters, unbounded retries, or a hard rejection based only on
+  exceeding the soft chapter guidance (960 words or 1,800 字),
 - languages other than English and Chinese;
 - automatic full-chapter rewriting after a veto;
 - a general-purpose agent marketplace or provider-specific client in each wrapper.

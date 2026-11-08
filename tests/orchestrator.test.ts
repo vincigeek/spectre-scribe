@@ -46,6 +46,7 @@ async function run(i: PassInput, replies: Partial<Record<string, Reply>>) {
 }
 
 const all = { OUTLINE: JSON.stringify(outline), STYLE: JSON.stringify(style), CONT: longDialogueDraft(), JUDGE: JSON.stringify(approved) };
+const zhAll = { ...all, STYLE: JSON.stringify({ ...style, targets: profileToTargets(zhProfile) }) };
 
 describe("runChapterPass (T-15, T-17)", () => {
   it("runs the fixed order and accepts on APPROVED", async () => {
@@ -75,10 +76,18 @@ describe("runChapterPass (T-15, T-17)", () => {
     expect(calls).toHaveLength(0);
     expect(events[0]).toMatchObject({ event: "error", data: { code: "retry-exhausted" } });
   });
-  it("rejects a draft over the limit", async () => {
-    const { events, names } = await run(input(), { ...all, CONT: "word ".repeat(801) });
-    expect(names).not.toContain("chapter-accepted");
-    expect(events.find((e) => e.event === "error")).toMatchObject({ data: { code: "word-limit" } });
+  it("accepts a 1589-character Chinese draft that clears the minimums", async () => {
+    const draft = `「${zhSentence(1589)}」`;
+    const { events, names } = await run(input({ styleProfile: zhProfile }), { ...zhAll, CONT: draft });
+    expect(names).toContain("chapter-accepted");
+    expect(events.find((e) => e.event === "error")).toBeUndefined();
+    expect(events.find((e) => e.event === "chapter-accepted")).toMatchObject({ data: { wordCount: 1589 } });
+  });
+  it("accepts a draft above the soft chapter maximum when the minimums pass", async () => {
+    const draft = `「${zhSentence(1801)}」`;
+    const { events, names } = await run(input({ styleProfile: zhProfile }), { ...zhAll, CONT: draft });
+    expect(names).toContain("chapter-accepted");
+    expect(events.find((e) => e.event === "chapter-accepted")).toMatchObject({ data: { wordCount: 1801 } });
   });
   it("rejects a draft with too little dialogue", async () => {
     // 700 words, so only the dialogue check fires.
