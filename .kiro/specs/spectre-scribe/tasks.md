@@ -251,7 +251,7 @@ must not be edited.
       independent of the UI language.
       *(REQ-28)*
 
-- [ ] **T-24** Run an end-to-end client test covering sample input, style profile,
+- [x] **T-24** Run an end-to-end client test covering sample input, style profile,
       story bible editing, one streamed chapter pass, a VETO review, a permitted
       retry, acceptance of chapters 1–3, and final Markdown downloads.
       *(REQ-01, REQ-07, REQ-15, REQ-16, REQ-18)*
