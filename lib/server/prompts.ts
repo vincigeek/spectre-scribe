@@ -61,6 +61,7 @@ export type PassContext = {
   bible: StoryBible;
   acceptedChapters: readonly AcceptedChapter[];
   vetoNotes?: readonly ContinuityFailure[];
+  ledger?: { characterStatuses: Record<string, string>; foreshadowing: Record<string, string> };
   outline?: OutlineOutput;
   style?: StyleOutput;
   draft?: string;
@@ -107,6 +108,7 @@ export function buildMessages(agent: AgentName, definition: string, ctx: PassCon
       ctx.acceptedChapters.map((c) => ({ chapterNumber: c.chapterNumber, title: c.title, prose: c.prose })),
     ),
   );
+  if (ctx.ledger) parts.push(section("CONTINUITY LEDGER (last accepted states)", ctx.ledger));
   if (ctx.vetoNotes && ctx.vetoNotes.length > 0) parts.push(section("VETO NOTES FROM THE LAST PASS", ctx.vetoNotes));
   if (agent !== "outline" && ctx.outline) parts.push(section("OUTLINE", ctx.outline));
   if ((agent === "continuation" || agent === "continuity") && ctx.style) parts.push(section("STYLE ANCHOR", ctx.style));

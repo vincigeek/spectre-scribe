@@ -13,6 +13,9 @@ const isRecord = (v: unknown): v is Rec => typeof v === "object" && v !== null &
 const isStrList = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === "string");
 const nonEmpty = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0;
 
+/** Words that mark a bible-sanctioned exception for a dead character (Check A). */
+export const DEAD_EXCEPTION = /flashback|memory|memories|remember|ghost|spirit|dream|vision|recording|echo|闪回|回忆|记忆|鬼|幽灵|亡魂|梦|录音|录像|幻象/i;
+
 const DISASTER =
   /disaster|reversal|betray|collapse|fail|lose|loss|death|dies|trap|catastroph|灾|反转|背叛|崩|失败|失去|死|陷阱|危机|逆转/i;
 
@@ -27,6 +30,8 @@ export function checkOutline(
   chapterNumber: 1 | 2 | 3,
   bible: StoryBible,
   openBefore: ReadonlySet<string>,
+  /** Characters dead before this chapter (ledger and earlier beat-sheet states). */
+  deadBefore: ReadonlySet<string> = new Set(),
 ): Check<OutlineOutput> {
   const issues: string[] = [];
   if (!isRecord(raw)) return { ok: false, issues: ["outline must be an object"] };
@@ -50,6 +55,11 @@ export function checkOutline(
     }
     if (b.characterIds.length === 0) issues.push(`${p} must name a character`);
     for (const id of b.characterIds) if (!charIds.has(id)) issues.push(`${p} unknown character "${id}"`);
+    for (const id of b.characterIds) {
+      if (deadBefore.has(id) && !DEAD_EXCEPTION.test(`${b.title} ${b.premise}`)) {
+        issues.push(`${p} character "${id}" is dead and cannot act without a flashback, memory, or ghost exception`);
+      }
+    }
     if (b.foreshadowingPlanted.length + b.foreshadowingPaidOff.length === 0) {
       issues.push(`${p} must plant or pay off foreshadowing`);
     }

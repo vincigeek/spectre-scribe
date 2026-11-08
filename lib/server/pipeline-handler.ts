@@ -6,7 +6,7 @@
 import "server-only";
 import { MAX_RETRIES, type AcceptedChapter, type ContinuityFailure } from "@/lib/pipeline-types";
 import { formatSse, KEEP_ALIVE } from "@/lib/sse";
-import { parseStoryBible, type ForeshadowingStatus } from "@/lib/story-bible";
+import { parseStoryBible, type CharacterStatus, type ForeshadowingStatus } from "@/lib/story-bible";
 import { parseStyleProfile } from "@/lib/style-profile";
 import { countUnits } from "@/lib/text-units";
 import { loadAgentDefinitions, type AgentDefinitions } from "./agent-loader";
@@ -84,6 +84,17 @@ export function parsePipelineRequest(body: unknown): ParsedRequest {
     foreshadowingState[id] = s as ForeshadowingStatus;
   }
 
+  const charIds = new Set(b.value.characters.map((c) => c.id));
+  const characterStatuses: Record<string, CharacterStatus> = {};
+  for (const c of b.value.characters) characterStatuses[c.id] = c.status;
+  if (ledger.characterStatuses !== undefined) {
+    if (!isRecord(ledger.characterStatuses)) return bad("continuityLedger is invalid.");
+    for (const [id, s] of Object.entries(ledger.characterStatuses)) {
+      if (!charIds.has(id) || !["alive", "dead", "unknown"].includes(s as string)) return bad("continuityLedger is invalid.");
+      characterStatuses[id] = s as CharacterStatus;
+    }
+  }
+
   let vetoNotes: ContinuityFailure[] | undefined;
   if (body.vetoNotes !== undefined) {
     if (!Array.isArray(body.vetoNotes) || body.vetoNotes.length > 20) return bad("vetoNotes is invalid.");
@@ -100,7 +111,7 @@ export function parsePipelineRequest(body: unknown): ParsedRequest {
     ok: true,
     input: {
       runId: body.runId, chapterNumber, retryCount, restartAt: body.restartAt, styleProfile: p.value, bible: b.value,
-      acceptedChapters: accepted, foreshadowingState, vetoNotes,
+      acceptedChapters: accepted, foreshadowingState, characterStatuses, vetoNotes,
       checkpoints: body.checkpoints ? structuredClone(body.checkpoints) as PassInput["checkpoints"] : undefined,
     },
   };

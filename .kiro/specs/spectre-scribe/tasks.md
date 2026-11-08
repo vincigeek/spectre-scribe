@@ -203,6 +203,12 @@ must not be edited.
       item, and a final-chapter payoff. Confirm the continuity code never rewrites
       a draft.
       *(REQ-13, REQ-14)*
+      Audit 2026-11-08: tests in `tests/continuity-stage.test.ts`. Check A
+      (dead character acting) is also enforced on the server: an outline beat
+      naming a character dead in the ledger or an earlier beat-sheet entry is
+      rejected unless its premise marks a flashback, memory, or ghost. Check B
+      (timeline order) stays a continuity-agent judgement; the tests cover that
+      its VETO blocks acceptance and reaches the user intact.
 
 - [x] **T-20a** Enforce the chapter arc roles (P0): the outline agent tags each
       chapter setup-plus-hook / escalation / payoff, Chapter 2 beats contain at

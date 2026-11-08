@@ -17,7 +17,7 @@ import {
   type RelayReceipt,
   type RestartPoint,
 } from "@/lib/pipeline-types";
-import type { ForeshadowingStatus, StoryBible } from "@/lib/story-bible";
+import type { CharacterStatus, ForeshadowingStatus, StoryBible } from "@/lib/story-bible";
 import type { StyleProfile } from "@/lib/style-profile";
 import { countUnits, LANGUAGE_LIMITS } from "@/lib/text-units";
 import { checkOutline, checkStyle } from "./agent-output";
@@ -54,6 +54,8 @@ export type PassInput = {
   bible: StoryBible;
   acceptedChapters: AcceptedChapter[];
   foreshadowingState: Record<string, ForeshadowingStatus>;
+  /** Last accepted character statuses from the continuity ledger. */
+  characterStatuses?: Record<string, CharacterStatus>;
   vetoNotes?: ContinuityFailure[];
   /** Validated checkpoints from the vetoed pass, used for a continuation restart. */
   checkpoints?: { outline?: unknown; style?: unknown };
@@ -101,8 +103,13 @@ export async function runChapterPass(input: PassInput, deps: PassDeps): Promise<
   const ctx: PassContext = {
     chapterNumber, styleProfile, bible, acceptedChapters: input.acceptedChapters,
     vetoNotes: retryCount > 0 ? input.vetoNotes : undefined,
+    ledger: { characterStatuses: { ...(input.characterStatuses ?? {}) }, foreshadowing: { ...input.foreshadowingState } },
   };
   const openBefore = new Set(Object.entries(input.foreshadowingState).filter(([, s]) => s !== "paidOff").map(([id]) => id));
+  const deadBefore = new Set<string>(Object.entries(input.characterStatuses ?? {}).filter(([, s]) => s === "dead").map(([id]) => id));
+  for (const b of bible.beatSheet) {
+    if (b.chapterNumber < chapterNumber) for (const [id, s] of Object.entries(b.characterStates)) if (s === "dead") deadBefore.add(id);
+  }
 
   async function call(agent: AgentName, schema?: { name: string; schema: Record<string, unknown> }): Promise<string> {
     if (deps.signal?.aborted) throw new PassError("interrupted", "The run was interrupted.");
@@ -119,12 +126,12 @@ export async function runChapterPass(input: PassInput, deps: PassDeps): Promise<
     let outline: OutlineOutput | undefined;
     let style: StyleOutput | undefined;
     if (input.restartAt === "continuation" && input.checkpoints) {
-      const o = checkOutline(input.checkpoints.outline, chapterNumber, bible, openBefore);
+      const o = checkOutline(input.checkpoints.outline, chapterNumber, bible, openBefore, deadBefore);
       const s = checkStyle(input.checkpoints.style, chapterNumber, lang, limits.styleAnchorMax);
       if (o.ok && s.ok) { outline = o.value; style = s.value; }
     }
     if (!outline || !style) {
-      const o = checkOutline(parseJsonText(await call("outline", { name: "outline", schema: OUTLINE_SCHEMA })), chapterNumber, bible, openBefore);
+      const o = checkOutline(parseJsonText(await call("outline", { name: "outline", schema: OUTLINE_SCHEMA })), chapterNumber, bible, openBefore, deadBefore);
       if (!o.ok) throw new PassError("schema-mismatch", "The outline did not pass the server checks.");
       outline = o.value;
       emit({ event: "agent-complete", data: { runId, agent: "outline", output: outline } });
