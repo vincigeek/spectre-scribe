@@ -33,10 +33,10 @@ const beat = (o: Partial<OutlineOutput["beats"][number]> = {}) => ({
 describe("run parameters (REQ-27)", () => {
   it("states language, unit, and limits", () => {
     expect(runParametersBlock({ chapterNumber: 2, styleProfile: zhProfile })).toContain(
-      "story_language: zh\nlength_unit: 字\nlogline_max: 30\nstyle_anchor_max: 700\nchapter_target: 1200\nchapter_min: 1200\ndialogue_min: 25%\nchapter_max: 1500",
+      "story_language: zh\nlength_unit: 字\nlogline_max: 30\nstyle_anchor_max: 700\nchapter_target: 1320\nchapter_min: 1200\ndialogue_min: 25%\nchapter_max: 1800 (soft guidance; try not to exceed it without truncating a complete scene)",
     );
     expect(runParametersBlock({ chapterNumber: 1, styleProfile: enProfile })).toContain("arc_role: setup-hook");
-    expect(runParametersBlock({ chapterNumber: 1, styleProfile: enProfile })).toContain("chapter_target: 640\nchapter_min: 640\ndialogue_min: 25%\nchapter_max: 800");
+    expect(runParametersBlock({ chapterNumber: 1, styleProfile: enProfile })).toContain("chapter_target: 704\nchapter_min: 640\ndialogue_min: 25%\nchapter_max: 960 (soft guidance; try not to exceed it without truncating a complete scene)");
   });
   it("has zh output caps about 1.6x en", () => {
     for (const a of ["outline", "style", "continuation", "continuity"] as const) {
@@ -87,7 +87,33 @@ describe("buildMessages (T-14)", () => {
     expect(message).toContain("complete replacement chapter, not a patch");
     expect(message).toContain("expand every outline beat into its own full scene");
     expect(message).toContain("at least 1320 字");
-    expect(message).toContain("Do not pad with repetition and do not exceed chapter_max");
+    expect(message).toContain("Treat chapter_max as soft guidance");
+    expect(message).not.toContain("do not exceed chapter_max");
+  });
+  it("gives every chapter beat full-scene guidance and a 1320-character repair target", () => {
+    const outline2: OutlineOutput = {
+      mode: "chapter",
+      chapterNumber: 2,
+      arcRole: "escalation",
+      beats: [beat({ arcRole: "escalation", premise: "A reversal hits." })],
+    };
+    const style2 = { chapterNumber: 2, anchor: "指导。", notes: [], targets: profileToTargets(zhProfile) };
+    const message = buildMessages("continuation", "D", {
+      chapterNumber: 2,
+      styleProfile: zhProfile,
+      bible: validBible(),
+      acceptedChapters: [acceptedChapter(1)],
+      outline: outline2,
+      style: style2,
+      continuationIssues: ["The draft has 986 字; at least 1200 is required."],
+    })[1]!.content;
+
+    expect(message).toContain("chapter_target: 1320\nchapter_min: 1200");
+    expect(message).toContain("expand every outline beat into its own full scene");
+    expect(message).toContain("concrete action, substantive dialogue, sensory detail");
+    expect(message).toContain("never compress a beat into a summary paragraph");
+    expect(message).toContain("at least 1320 字");
+    expect(message).toContain("Treat chapter_max as soft guidance");
   });
   it("neutralises delimiter injection in user data", () => {
     const b = validBible();

@@ -86,7 +86,7 @@ export function runParametersBlock(ctx: Pick<PassContext, "chapterNumber" | "sty
     `chapter_target: ${l.chapterTarget}`,
     `chapter_min: ${l.chapterMin}`,
     `dialogue_min: ${Math.round(l.dialogueMin * 100)}%`,
-    `chapter_max: ${l.chapterMax}`,
+    `chapter_max: ${l.chapterMax} (soft guidance; try not to exceed it without truncating a complete scene)`,
     "Write all prose and free-text fields in the story language.",
     "Keep JSON keys, enum values, ids, and check ids in English.",
     "These values override any number or language in your instructions.",
@@ -110,15 +110,21 @@ const TASKS: Readonly<Record<AgentName, string>> = {
 function continuationTask(ctx: PassContext): string {
   const instructions = [TASKS.continuation];
   const limits = LANGUAGE_LIMITS[ctx.styleProfile.language];
+  instructions.push(
+    `The continuation must expand every outline beat into its own full scene with concrete action, substantive dialogue, sensory detail, and a consequence that changes what happens next; cover every beat in order and never compress a beat into a summary paragraph.`,
+  );
+  instructions.push(
+    `Aim for chapter_target. Treat chapter_max as soft guidance: try not to exceed it, but do not truncate a complete scene or omit a beat to meet it.`,
+  );
   if (ctx.chapterNumber === 3) {
     instructions.push(
-      `Chapter 3 is the payoff chapter: expand every outline beat into its own full scene. Give each payoff, resolution, and epiphany beat concrete action, dialogue, sensory detail, and a consequence; never compress a beat into a summary paragraph. Aim above chapter_min with a safety margin while staying below chapter_max.`,
+      `Chapter 3 is the payoff chapter: give each payoff, resolution, and epiphany beat concrete action, dialogue, sensory detail, and a consequence; aim for chapter_target and, where possible, stay near or below the soft chapter_max without cutting a complete scene.`,
     );
   }
   if (ctx.continuationIssues && ctx.continuationIssues.length > 0) {
-    const repairTarget = Math.min(limits.chapterMax - 1, Math.ceil(limits.chapterMin * 1.1));
+    const repairTarget = limits.chapterTarget;
     instructions.push(
-      `This is a server-check repair attempt. Return a complete replacement chapter, not a patch or commentary, and fix every listed check: ${ctx.continuationIssues.join(" ")} For a length-minimum failure, write at least ${repairTarget} ${limits.unitLabel} to leave a safety margin above chapter_min; for a dialogue failure, add substantive paired dialogue. Do not pad with repetition and do not exceed chapter_max.`,
+      `This is a server-check repair attempt. Return a complete replacement chapter, not a patch or commentary, and fix every listed check: ${ctx.continuationIssues.join(" ")} For a length-minimum failure, write at least ${repairTarget} ${limits.unitLabel} to leave a safety margin above chapter_min; for a dialogue failure, add substantive paired dialogue. Do not pad with repetition; treat chapter_max as soft guidance and finish complete scenes even if the draft goes over it.`,
     );
   }
   return instructions.join(" ");

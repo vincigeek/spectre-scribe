@@ -118,7 +118,7 @@ The server adapter handles the configured OpenAI-compatible endpoint, not the br
 - Treat only connection failures, 408, 429, 500, 502, 503, and 504 as transient. Honor a
   valid `Retry-After` value but cap its delay and allow at most one transport retry when the
   route deadline leaves room. Never retry authentication, permissions, malformed requests,
-  unsupported schema, refusal, or word-limit failures.
+  unsupported schema, refusal, or legacy word-limit failures.
 - Provider error bodies are not forwarded. Map them to stable internal codes such as
   `configuration`, `provider-auth`, `provider-timeout`, `provider-rate-limit`,
   `provider-unavailable`, `invalid-agent-output`, `continuity-veto`, and `cancelled`.

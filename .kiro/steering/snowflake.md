@@ -15,8 +15,8 @@ approved before the next one starts.
 
 ## Snowflake Lite: the compressed layer sequence
 
-The full method is designed for novels. This demo is exactly 3 chapters, each within
-the chapter limit (800 words, or 1,500 字 in Chinese), so the sequence is compressed. Do not restore the steps
+The full method is designed for novels. This demo is exactly 3 chapters, each aimed
+near the soft chapter guidance (960 words, or 1,800 字 in Chinese), so the sequence is compressed. Do not restore the steps
 that were cut without an owner decision.
 
 ### Step 0: Style profile (project-specific, before the Snowflake starts)

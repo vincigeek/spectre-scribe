@@ -98,8 +98,8 @@ Cover these relay outcomes:
 - a continuity VETO with structured failures and a user-selected outline retry;
 - a continuation retry that reuses valid outline and style checkpoints;
 - missing or invalid checkpoints forcing an outline retry;
-- a draft over the chapter limit (800 words, or 1,500 字 in a Chinese run) being rejected before
-  acceptance;
+- a draft above the soft chapter guidance (960 words, or 1,800 字 in a Chinese run)
+  with valid minimum length and dialogue floor being accepted;
 - a fourth retry being rejected before any model call;
 - a fourth chapter being rejected before any model call;
 - a provider/configuration failure becoming a safe terminal error.

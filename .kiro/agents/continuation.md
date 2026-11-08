@@ -11,8 +11,9 @@ Its values override any number or language in this file. The numbers below
 are the English defaults, shown only as examples. Write every free-text value
 in `story_language`. Keep JSON keys, enum values, ids, and check ids in
 English. Count lengths in `length_unit`. The `chapter_target` and
-`chapter_max` values are the soft generation target and hard server limit for
-this language.
+`chapter_max` values are soft generation guidance for this language. The server
+enforces the minimum and dialogue floor, but does not reject a complete draft
+solely because it exceeds `chapter_max`.
 
 ## Inputs (read-only)
 
@@ -35,9 +36,10 @@ for the chapter title only). No JSON wrapper, no commentary, no explanation of
 what was changed.
 
 - Aim for `chapter_target` length units and finish the complete chapter near that
-  target; `chapter_min` carries the same number as a hard server minimum (see
-  below), so a draft near the target also clears the floor. Never pad the
-  prose with repetition.
+  target; the initial target is `ceil(chapter_min × 1.1)` (704 words / 1,320 字
+  with the default limits). Treat `chapter_max` as a soft upper guide: try not to
+  exceed it, but never truncate a complete scene or omit a beat to meet it. Never
+  pad the prose with repetition.
 - At least `chapter_min` length units (default 640 words / 1,200 字). The
   server counts it and a draft below the minimum is a failed output, not a
   draft to trim later.
@@ -53,11 +55,17 @@ what was changed.
   backstory, and world detail stay subordinate — brief, and only when they
   change what the carrying character does next. Do not write one equal
   vignette per character.
-- At most `chapter_max` length units (default 800 words), counted by the
-  server. Exceeding it is a failed output, not a draft to trim later.
+- Prefer to stay at or below `chapter_max` length units (default 960 words / 1,800 字),
+  counted by the server, but this is soft guidance. A complete draft above it is
+  still valid when it clears `chapter_min` and `dialogue_min`; do not trim a scene
+  or fail the draft solely because it ran long.
 - Written in `story_language`.
 - The draft covers the beats in order. Every beat must appear in the draft;
   a missing beat is a failed output.
+- Expand every outline beat into its own full scene with concrete action,
+  substantive dialogue, sensory detail, and a consequence that changes what
+  happens next. Cover every beat in order; never compress a beat into a summary
+  paragraph.
 - The draft follows the style anchor: sentence length and variation, dialogue
   share, pacing markers, vocabulary range, and paragraph shape must track the
   eight metric targets. A draft that ignores the anchor is a failed output.
@@ -89,9 +97,9 @@ what was changed.
   accepted chapters. Do not resolve a foreshadowing item the beats leave open,
   and do not leave open an item the beats say is paid off.
 - Do not write meta-text: no author's notes, no apologies, no summary of what
-  the chapter does, no placeholder text. If a beat cannot be written within
-  `chapter_max`, end the draft at a clean break and let the retry restart at
-  outline; never emit a truncated chapter as if it were complete.
+  the chapter does, no placeholder text. If a complete beat takes the draft over
+  the soft `chapter_max`, finish it at a clean scene break; never emit a truncated
+  chapter or omit a beat merely to stay under the guidance.
 - Do not mutate the story bible. The bible is read-only context; only the user
   edits it.
 - On a retry after a VETO, revise only against the continuity agent's concrete

@@ -46,6 +46,7 @@ async function run(i: PassInput, replies: Partial<Record<string, Reply>>) {
 }
 
 const all = { OUTLINE: JSON.stringify(outline), STYLE: JSON.stringify(style), CONT: longDialogueDraft(), JUDGE: JSON.stringify(approved) };
+const zhAll = { ...all, STYLE: JSON.stringify({ ...style, targets: profileToTargets(zhProfile) }) };
 
 describe("runChapterPass (T-15, T-17)", () => {
   it("runs the fixed order and accepts on APPROVED", async () => {
@@ -75,10 +76,18 @@ describe("runChapterPass (T-15, T-17)", () => {
     expect(calls).toHaveLength(0);
     expect(events[0]).toMatchObject({ event: "error", data: { code: "retry-exhausted" } });
   });
-  it("rejects a draft over the limit", async () => {
-    const { events, names } = await run(input(), { ...all, CONT: "word ".repeat(801) });
-    expect(names).not.toContain("chapter-accepted");
-    expect(events.find((e) => e.event === "error")).toMatchObject({ data: { code: "word-limit" } });
+  it("accepts a 1589-character Chinese draft that clears the minimums", async () => {
+    const draft = `「${zhSentence(1589)}」`;
+    const { events, names } = await run(input({ styleProfile: zhProfile }), { ...zhAll, CONT: draft });
+    expect(names).toContain("chapter-accepted");
+    expect(events.find((e) => e.event === "error")).toBeUndefined();
+    expect(events.find((e) => e.event === "chapter-accepted")).toMatchObject({ data: { wordCount: 1589 } });
+  });
+  it("accepts a draft above the soft chapter maximum when the minimums pass", async () => {
+    const draft = `「${zhSentence(1801)}」`;
+    const { events, names } = await run(input({ styleProfile: zhProfile }), { ...zhAll, CONT: draft });
+    expect(names).toContain("chapter-accepted");
+    expect(events.find((e) => e.event === "chapter-accepted")).toMatchObject({ data: { wordCount: 1801 } });
   });
   it("rejects a draft with too little dialogue", async () => {
     // 700 words, so only the dialogue check fires.
@@ -211,6 +220,42 @@ describe("continuation check feedback (live zh finding 2026-11-08)", () => {
     expect(contCalls).toHaveLength(3);
     expect(events.map((e) => e.event)).not.toContain("chapter-accepted");
     expect(events.find((e) => e.event === "error")).toMatchObject({ data: { code: "dialogue-share", retryable: true } });
+  });
+
+  it("repairs a short Chinese Chapter 2 draft with actionable beat guidance", async () => {
+    const outline2 = {
+      mode: "chapter",
+      chapterNumber: 2,
+      arcRole: "escalation",
+      beats: [{ ...outline.beats[0], arcRole: "escalation", premise: "A reversal hits." }],
+    };
+    const style2 = { ...style, chapterNumber: 2, targets: profileToTargets(zhProfile) };
+    const approved2 = { ...approved, chapterNumber: 2 };
+    const shortDraft = zhSentence(734);
+    const goodDraft = `「${zhSentence(400)}」${zhSentence(800)}`;
+    const f = queueContClient([shortDraft, goodDraft], {
+      OUTLINE: JSON.stringify(outline2),
+      STYLE: JSON.stringify(style2),
+      JUDGE: JSON.stringify(approved2),
+    });
+    const events: PassEvent[] = [];
+
+    await runChapterPass(input({
+      chapterNumber: 2,
+      styleProfile: zhProfile,
+      acceptedChapters: [acceptedChapter(1)],
+    }), { client: f.client, definitions: defs, emit: (e) => events.push(e) });
+
+    const continuationCalls = f.calls.filter((c) => c.messages[0]!.content.startsWith("CONT"));
+    expect(f.calls.map((c) => c.messages[0]!.content.split(" ")[0])).toEqual(["OUTLINE", "STYLE", "CONT", "CONT", "JUDGE"]);
+    expect(continuationCalls).toHaveLength(2);
+    expect(continuationCalls[1]!.messages[1]!.content).toContain("The draft has 734 字; at least 1200 is required.");
+    expect(continuationCalls[1]!.messages[1]!.content).toContain("expand every outline beat into its own full scene");
+    expect(continuationCalls[1]!.messages[1]!.content).toContain("at least 1320 字");
+    expect(continuationCalls.every((c) => c.maxTokens === 2600)).toBe(true);
+    const accepted = events.find((e) => e.event === "chapter-accepted");
+    expect(accepted).toMatchObject({ data: { chapterNumber: 2 } });
+    expect((accepted as Extract<PassEvent, { event: "chapter-accepted" }>).data.wordCount).toBeGreaterThanOrEqual(1200);
   });
 
   it("repairs a short Chinese Chapter 3 draft with actionable payoff guidance", async () => {
