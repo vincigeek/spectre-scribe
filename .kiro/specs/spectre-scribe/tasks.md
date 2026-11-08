@@ -112,7 +112,7 @@ must not be edited.
       content rather than adding examples to the specification.
       *(REQ-06, REQ-08, REQ-12)*
 
-- [ ] **T-11a** Implement `app/api/bible/draft/route.ts` and the outline agent's
+- [x] **T-11a** Implement `app/api/bible/draft/route.ts` and the outline agent's
       `plan` mode (design §2.12). One request is one layer (`core` or
       `structure`) and one call on `LLM_MODEL`. Run every deterministic check in
       the §2.12 table before returning a draft. Return `schema-mismatch` or
