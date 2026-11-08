@@ -17,7 +17,7 @@ must not be edited.
       Tailwind 4.3.5, Vitest 5.1.0 installed with pnpm and a lockfile; `next build`
       passes. shadcn/ui setup is still open.
 
-- [ ] **T-02** Create the App Router shell in `app/layout.tsx` and
+- [x] **T-02** Create the App Router shell in `app/layout.tsx` and
       `app/page.tsx`. Add the workspace navigation for Sample Input, Style
       Profile, Story Bible, Chapter Workspace, and Final Story using accessible
       shadcn/ui primitives.
@@ -82,7 +82,7 @@ must not be edited.
       the Chinese cases listed in `testing.md`.
       *(REQ-04, REQ-05)*
 
-- [ ] **T-09** Build `components/sample-input.tsx` and
+- [x] **T-09** Build `components/sample-input.tsx` and
       `components/style-profile.tsx`. Support paste and `.txt` import, show the
       validation error, trigger analysis, and render all eight metrics with their
       definitions as read-only values.
@@ -92,7 +92,7 @@ must not be edited.
 
 ## Phase 3 — Story bible and downloads
 
-- [ ] **T-10** Implement the story bible editor in
+- [x] **T-10** Implement the story bible editor in
       `components/story-bible-editor.tsx`. Expose editable genre and tone;
       setting time period, locations, and world rules; character id/name/role/
       status/description; foreshadowing id/description/status/deferred chapter;
@@ -119,7 +119,7 @@ must not be edited.
       `model-refusal` on failure. Pass the live gate first.
       *(REQ-30, REQ-31, REQ-32)*
 
-- [ ] **T-11b** Build `components/draft-from-seed.tsx`: seed form, `core`
+- [x] **T-11b** Build `components/draft-from-seed.tsx`: seed form, `core`
       preview, accept, `structure` preview, accept, redraft with 3 tries per
       layer, the overwrite prompt with one undo, and the stale-structure notice.
       Manual entry stays available. Test with mocked responses, including a
@@ -222,7 +222,7 @@ must not be edited.
 
 ## Phase 6 — Streaming workspace and final story
 
-- [ ] **T-21** Build `components/chapter-workspace.tsx`. Start the SSE request for
+- [x] **T-21** Build `components/chapter-workspace.tsx`. Start the SSE request for
       the current chapter, show agent progress, and render the beat outline,
       draft, and continuity result. Show a green `APPROVED` state or a red `VETO`
       state with failing items and fixes. Render the relay receipt for the pass
@@ -231,13 +231,13 @@ must not be edited.
       point and send the VETO context back in the next request.
       *(REQ-10, REQ-15, REQ-16d)*
 
-- [ ] **T-22** Enforce the chapter state machine in the client: do not add a
+- [x] **T-22** Enforce the chapter state machine in the client: do not add a
       chapter until the server sends `APPROVED` and the word-count check passes;
       keep retry count across reloads; allow no more than 3 retries after the
       first attempt; and disable the next-chapter action after chapter 3.
       *(REQ-10, REQ-18, REQ-20, REQ-21)*
 
-- [ ] **T-23** Build `components/final-story.tsx`. Render the exactly three
+- [x] **T-23** Build `components/final-story.tsx`. Render the exactly three
       accepted chapters in order, show their titles, and expose individual and
       complete-story Markdown downloads. Show one collapsible relay receipt per
       accepted chapter. Do not invent demo plot or character
