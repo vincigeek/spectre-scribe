@@ -1,19 +1,22 @@
 "use client";
-/** Style profile as a metric card grid (REQ-04, REQ-16b; ux.md §2). */
+/** Page 2 — style profile as a metric card grid (REQ-04, REQ-16b; ux.md §2). */
+import type { ReactNode } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CardDescription, CardTitle } from "@/components/ui/card";
 import { useI18n, type MessageKey } from "@/lib/i18n";
 import type { StyleProfile } from "@/lib/style-profile";
-import { Section } from "./ui";
+import { Panel, Section } from "./console";
 
 const fmt = (n: number, d = 2) => (Number.isInteger(n) ? String(n) : n.toFixed(d));
 
-function Card({ name, value, def, wide, children }: { name: string; value?: string; def: string; wide?: boolean; children?: React.ReactNode }) {
+function Metric({ name, value, def, wide, children }: { name: string; value?: string; def: string; wide?: boolean; children?: ReactNode }) {
   return (
-    <div className={`px-frame flex flex-col gap-2 p-4 ${wide ? "sm:col-span-2" : ""}`}>
-      <span className="label-pixel text-[0.7rem] text-muted">{name}</span>
+    <Panel className={`flex flex-col gap-2 ${wide ? "sm:col-span-2" : ""}`}>
+      <CardTitle className="label-pixel text-[0.7rem] font-normal text-muted-foreground">{name}</CardTitle>
       {value && <span className="font-mono text-2xl text-signal">{value}</span>}
       {children}
-      <span className="mt-auto text-xs leading-snug text-muted">{def}</span>
-    </div>
+      <CardDescription className="mt-auto leading-snug">{def}</CardDescription>
+    </Panel>
   );
 }
 
@@ -41,28 +44,30 @@ export function StyleProfileView({ profile, notice }: { profile: StyleProfile; n
       title={t("profile.title").replace(/^\d+ \/ /, "")}
       subtitle={t("profile.subtitle")}
       aside={
-        <span className="font-mono text-xs text-muted">
+        <span className="font-mono text-xs text-muted-foreground">
           {t("profile.line", { lang: t(`lang.${profile.language}`), unit: u })}
           {profile.segmentation === "char" && t("profile.approx")}
         </span>
       }
     >
-      {notice === "unsupported-language" && <p className="text-sm text-amber">⚠ {t("profile.unsupported")}</p>}
+      {notice === "unsupported-language" && (
+        <Alert className="border-amber-dim"><AlertDescription className="text-amber">⚠ {t("profile.unsupported")}</AlertDescription></Alert>
+      )}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {simple.slice(0, 4).map(([k, v, d]) => <Card key={k} name={t(k)} value={v} def={d} />)}
-        <Card name={t("m.pacing")} def={t("m.pacing.d", { unit: u })} wide>
+        {simple.slice(0, 4).map(([k, v, d]) => <Metric key={k} name={t(k)} value={v} def={d} />)}
+        <Metric name={t("m.pacing")} def={t("m.pacing.d", { unit: u })} wide>
           <dl className="grid grid-cols-3 gap-2 font-mono">
             {pacing.map(([k, v]) => (
               <div key={k}>
-                <dt className="text-[0.7rem] text-muted">{t(k).split(/[:：]\s*/)[1]}</dt>
+                <dt className="text-[0.7rem] text-muted-foreground">{t(k).split(/[:：]\s*/)[1]}</dt>
                 <dd className="text-xl text-signal">{fmt(v)}</dd>
               </div>
             ))}
           </dl>
-        </Card>
-        {simple.slice(4).map(([k, v, d]) => <Card key={k} name={t(k)} value={v} def={d} />)}
+        </Metric>
+        {simple.slice(4).map(([k, v, d]) => <Metric key={k} name={t(k)} value={v} def={d} />)}
       </div>
-      <p className="text-xs text-muted">{t("profile.disclaimer")}</p>
+      <p className="text-xs text-muted-foreground">{t("profile.disclaimer")}</p>
     </Section>
   );
 }

@@ -1,11 +1,17 @@
 "use client";
-/** Sample input panel (REQ-01, REQ-02, REQ-25; ux.md §1; T-09). */
+/** Page 1 — sample input (REQ-01, REQ-02, REQ-25; ux.md §1; T-09). */
 import { useId, useMemo, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 import { postJson } from "@/lib/client-api";
 import { useI18n } from "@/lib/i18n";
 import type { StyleProfile } from "@/lib/style-profile";
 import { analysisLanguage, countUnits, detectLanguage, LANGUAGE_LIMITS, type Language } from "@/lib/text-units";
-import { Panel, Section } from "./ui";
+import { Panel, Section } from "./console";
 
 type Props = { onProfile: (p: StyleProfile, notice: string | null) => void; disabled?: boolean };
 
@@ -50,45 +56,47 @@ export function SampleInput({ onProfile, disabled }: Props) {
 
   return (
     <Section id="sample" number="01" title={t("sample.title").replace(/^\d+ \/ /, "")} subtitle={t("sample.intro", { min: limits.minSample, unit })}>
-      <Panel className="space-y-3">
-        <label htmlFor={`${id}-t`} className="sr-only">{t("sample.text")}</label>
-        <textarea
+      <Panel className="space-y-4">
+        <Label htmlFor={`${id}-t`} className="sr-only">{t("sample.text")}</Label>
+        <Textarea
           id={`${id}-t`}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          rows={10}
+          rows={12}
           disabled={disabled}
           aria-describedby={`${id}-c ${error ? `${id}-e` : ""}`}
-          className="field min-h-60 font-mono"
+          className="min-h-64 border-2 font-mono text-sm leading-relaxed"
         />
-        <div className="h-1 w-full bg-line" aria-hidden>
-          <div className={`h-1 ${enough ? "bg-signal" : "bg-amber"}`} style={{ width: `${pct}%` }} />
-        </div>
-        <div className="flex flex-wrap items-center gap-3 text-sm">
-          <label className="btn btn-ghost btn-sm cursor-pointer">
-            {t("sample.import")}
-            <input type="file" accept=".txt,text/plain" className="sr-only" onChange={(e) => void onFile(e.target.files?.[0])} disabled={disabled} />
-          </label>
-          <span id={`${id}-c`} className={`font-mono ${enough ? "text-signal" : "text-muted"}`}>
+        <Progress value={pct} aria-label={`${units} / ${limits.minSample} ${unit}`} className={enough ? "[&>*]:bg-signal" : "[&>*]:bg-amber"} />
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="outline" size="sm" asChild disabled={disabled}>
+            <label className="cursor-pointer">
+              {t("sample.import")}
+              <input type="file" accept=".txt,text/plain" className="sr-only" onChange={(e) => void onFile(e.target.files?.[0])} disabled={disabled} />
+            </label>
+          </Button>
+          <span id={`${id}-c`} className={`font-mono text-sm ${enough ? "text-signal" : "text-muted-foreground"}`}>
             {enough ? "✓" : "…"} {units} / {limits.minSample} {unit}
           </span>
-          <label className="flex items-center gap-2 text-muted">
+          <Label className="gap-2 text-muted-foreground">
             {t("sample.language")}
-            <select value={override} onChange={(e) => setOverride(e.target.value as Language | "")} className="field" disabled={disabled}>
-              <option value="">{t("sample.auto", { lang: t(`lang.${detected}`) })}</option>
-              <option value="en">{t("lang.en")}</option>
-              <option value="zh">{t("lang.zh")}</option>
-            </select>
-          </label>
-          <button type="button" onClick={() => void analyse()} disabled={disabled || busy || !enough} className="btn btn-primary ml-auto">
+            <NativeSelect size="sm" value={override} onChange={(e) => setOverride(e.target.value as Language | "")} disabled={disabled}>
+              <NativeSelectOption value="">{t("sample.auto", { lang: t(`lang.${detected}`) })}</NativeSelectOption>
+              <NativeSelectOption value="en">{t("lang.en")}</NativeSelectOption>
+              <NativeSelectOption value="zh">{t("lang.zh")}</NativeSelectOption>
+            </NativeSelect>
+          </Label>
+          <Button size="lg" className="px-corners-sm ml-auto" onClick={() => void analyse()} disabled={disabled || busy || !enough}>
             {busy ? t("sample.analysing") : t("sample.analyse")}
-          </button>
+          </Button>
         </div>
-        <p className="text-xs text-muted">{t("sample.subtitle")}</p>
+        <p className="text-xs text-muted-foreground">{t("sample.subtitle")}</p>
         {detected === "other" && text.trim() && !override && (
-          <p role="status" className="text-sm text-amber">⚠ {t("sample.unsupported")}</p>
+          <Alert className="border-amber-dim text-amber"><AlertDescription className="text-amber">⚠ {t("sample.unsupported")}</AlertDescription></Alert>
         )}
-        {error && <p id={`${id}-e`} role="alert" className="text-sm text-veto">✕ {error}</p>}
+        {error && (
+          <Alert variant="destructive" role="alert" id={`${id}-e`}><AlertDescription>✕ {error}</AlertDescription></Alert>
+        )}
       </Panel>
     </Section>
   );

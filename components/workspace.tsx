@@ -19,9 +19,29 @@ import { SampleInput } from "./sample-input";
 import { StoryBibleEditor, emptyBible } from "./story-bible-editor";
 import { StyleProfileView } from "./style-profile";
 import { safeFileName, triggerDownload } from "@/lib/downloads";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const REFUSALS = new Set(["access-required", "rate-limited", "live-unavailable"]);
 const IS_DEV = process.env.NODE_ENV === "development";
+
+export type Page = "sample" | "style" | "bible" | "chapters" | "final";
+const PAGES: readonly Page[] = ["sample", "style", "bible", "chapters", "final"];
+const PAGE_KEY: Record<Page, MessageKey> = { sample: "step.sample", style: "step.style", bible: "step.bible", chapters: "step.chapters", final: "step.final" };
 
 type ReplayState = { file: ReplayFile; pass: PassView; chapters: AcceptedChapter[]; speed: 1 | 2; playing: boolean; done: boolean };
 
@@ -39,12 +59,18 @@ export function Workspace() {
   const [replayList, setReplayList] = useState<Array<{ name: string; title: string; language: string }>>([]);
   const abortRef = useRef<AbortController | null>(null);
   const timers = useRef<number[]>([]);
+  const [page, setPage] = useState<Page>("sample");
+  const [confirmNew, setConfirmNew] = useState(false);
 
   // Restore once, then persist on every change.
   useEffect(() => {
     const r = restoreSession(localStorage.getItem(SESSION_STORAGE_KEY));
     setSession(r.session);
-    if (r.notice === "restored") setRestoreNotice(t("top.restored"));
+    if (r.notice === "restored") {
+      setRestoreNotice(t("top.restored"));
+      const s = r.session;
+      setPage(s.acceptedChapters.length === 3 ? "final" : s.acceptedChapters.length > 0 ? "chapters" : s.bible && s.styleProfile && parseStoryBible(s.bible, s.styleProfile.language).ok ? "chapters" : s.styleProfile ? "bible" : "sample");
+    }
     if (r.notice?.startsWith("discarded")) setRestoreNotice(t("top.restoreDiscarded"));
     setCode(getAccessCode());
     fetch("/replays/index.json").then((res) => (res.ok ? res.json() : [])).then((l) => setReplayList(Array.isArray(l) ? l : [])).catch(() => undefined);
@@ -80,6 +106,7 @@ export function Workspace() {
   function setProfile(p: StyleProfile, notice: string | null) {
     setProfileNotice(notice);
     setSession((s) => ({ ...s, styleProfile: p, bible: s.bible ?? emptyBible() }));
+    setPage("style");
   }
 
   const start = useCallback(async (restartAt: RestartPoint) => {
@@ -115,7 +142,8 @@ export function Workspace() {
   }, [nextChapter, session, pass, passIsForNext, retriesUsed]);
 
   function newSession() {
-    if (!window.confirm(t("top.newSessionConfirm"))) return;
+    setConfirmNew(false);
+    setPage("sample");
     abortRef.current?.abort();
     dispatch({ type: "reset" });
     setRecorded([]);
@@ -145,6 +173,7 @@ export function Workspace() {
       const res = await fetch(`/replays/${name}.json`);
       const parsed = parseReplayFile(await res.json());
       if (!parsed.ok) return window.alert(t("top.replayInvalid"));
+      setPage("chapters");
       play({ file: parsed.file, pass: EMPTY_PASS, chapters: [], speed: 1, playing: true, done: false }, 1);
     } catch {
       window.alert(t("top.replayLoadFail"));
@@ -174,28 +203,54 @@ export function Workspace() {
   }
 
   const replayButtons = replayList.length > 0 && (
-    <div className="flex flex-wrap gap-2 text-sm">
+    <div className="flex flex-wrap gap-2">
       {replayList.map((r) => (
-        <button key={r.name} type="button" className="btn btn-ghost btn-sm text-replay" onClick={() => void loadReplay(r.name)}>
+        <Button key={r.name} variant="outline" size="sm" className="border-replay/50 text-replay" onClick={() => void loadReplay(r.name)}>
           ▷ {t("top.watch", { title: r.title, language: r.language })}
-        </button>
+        </Button>
       ))}
     </div>
   );
 
-  type StepState = "done" | "current" | "locked";
-  const steps: Array<[MessageKey, StepState]> = replay
-    ? []
-    : [
-        ["step.sample", session.styleProfile ? "done" : "current"],
-        ["step.style", session.styleProfile ? "done" : "locked"],
-        ["step.bible", !session.styleProfile ? "locked" : bibleValid ? "done" : "current"],
-        ["step.chapters", !bibleValid ? "locked" : session.acceptedChapters.length === 3 ? "done" : "current"],
-        ["step.final", session.acceptedChapters.length === 3 ? "done" : "locked"],
-      ];
+  // ---------- page availability (five switchable pages) ----------
+  const replayChapters = replay?.chapters ?? [];
+  const available: Record<Page, boolean> = replay
+    ? { sample: false, style: true, bible: true, chapters: true, final: replayChapters.length > 0 }
+    : {
+        sample: true,
+        style: Boolean(session.styleProfile),
+        bible: Boolean(session.styleProfile),
+        chapters: Boolean(session.styleProfile) && (bibleValid || session.acceptedChapters.length > 0),
+        final: session.acceptedChapters.length > 0,
+      };
+  const done: Record<Page, boolean> = replay
+    ? { sample: false, style: true, bible: true, chapters: replayChapters.length === 3, final: replay.done }
+    : {
+        sample: Boolean(session.styleProfile),
+        style: Boolean(session.styleProfile),
+        bible: bibleValid,
+        chapters: session.acceptedChapters.length === 3,
+        final: session.acceptedChapters.length === 3,
+      };
+  const current: Page = available[page] ? page : (PAGES.filter((p) => available[p]).at(-1) ?? "sample");
+  const nextPage = PAGES[PAGES.indexOf(current) + 1];
+  const canNext = nextPage ? available[nextPage] : false;
+
+  const navFooter = (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-dashed border-line pt-4">
+      {PAGES.indexOf(current) > 0 && available[PAGES[PAGES.indexOf(current) - 1]!] ? (
+        <Button variant="ghost" onClick={() => setPage(PAGES[PAGES.indexOf(current) - 1]!)}>← {t("nav.back")}</Button>
+      ) : <span />}
+      {nextPage && (
+        <Button variant={canNext ? "default" : "outline"} disabled={!canNext} onClick={() => setPage(nextPage)}>
+          {t("nav.next", { step: t(PAGE_KEY[nextPage]) })} →
+        </Button>
+      )}
+    </div>
+  );
 
   const header = (
-    <header className="sticky top-0 z-20 -mx-4 border-b-2 border-line bg-ink/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
+    <header className="sticky top-0 z-20 -mx-4 border-b-2 border-line bg-background/95 px-4 pt-3 backdrop-blur sm:-mx-6 sm:px-6">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex items-center gap-2">
           <span className="signal-dot" aria-hidden />
@@ -204,122 +259,168 @@ export function Workspace() {
         {replay ? (
           <span className="label-pixel text-xs text-replay">REPLAY</span>
         ) : (
-          <span className="font-mono text-xs text-muted">
-            {restoreNotice && restoreNotice === t("top.restored") ? t("shell.restored") : session.styleProfile ? t("shell.saved") : t("shell.new")}
+          <span className="font-mono text-xs text-muted-foreground">
+            {restoreNotice === t("top.restored") ? t("shell.restored") : session.styleProfile ? t("shell.saved") : t("shell.new")}
           </span>
         )}
         <div className="ml-auto flex flex-wrap items-center gap-3">
           <LanguageSwitch />
           {!replay && (
             <>
-              <label className="flex items-center gap-2 text-sm text-muted">
+              <Label className="gap-2 font-normal text-muted-foreground">
                 <span className="label-pixel text-[0.65rem] text-signal">{t("top.live")}</span>
                 {t("top.accessCode")}
-                <input type="password" autoComplete="off" value={code} onChange={(e) => { setCode(e.target.value); setAccessCode(e.target.value); }} className="field w-32 py-1" />
-              </label>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={newSession}>{t("top.newSession")}</button>
+                <Input type="password" autoComplete="off" value={code} onChange={(e) => { setCode(e.target.value); setAccessCode(e.target.value); }} className="h-7 w-32 border-2" />
+              </Label>
+              <Button variant="outline" size="sm" onClick={() => setConfirmNew(true)}>{t("top.newSession")}</Button>
             </>
           )}
         </div>
       </div>
-      {steps.length > 0 && (
-        <ol className="mt-3 flex flex-wrap items-center gap-2" aria-label={t("step.progress")}>
-          {steps.map(([k, st], i) => (
-            <li key={k} className="flex items-center gap-2">
-              <span className={`chip ${st === "done" ? "chip-done" : st === "current" ? "chip-running" : ""}`}>
-                <span aria-hidden>{st === "done" ? "■" : st === "current" ? "▶" : "□"}</span>
-                <span className="label-pixel">{i + 1} {t(k)}</span>
-                <span className="sr-only">{t(`step.${st}`)}</span>
-              </span>
-              {i < steps.length - 1 && <span aria-hidden className="text-line-strong">—</span>}
-            </li>
-          ))}
-        </ol>
-      )}
+      <TabsList variant="line" aria-label={t("nav.pages")} className="mt-3 h-auto w-full justify-start gap-1 overflow-x-auto p-0">
+        {PAGES.map((p, i) => {
+          const locked = !available[p];
+          const trigger = (
+            <TabsTrigger
+              key={p}
+              value={p}
+              disabled={locked}
+              className="h-10 flex-none gap-2 px-3 data-active:text-signal group-data-[variant=line]/tabs-list:data-active:after:bg-signal"
+            >
+              <span aria-hidden className={done[p] ? "text-signal" : locked ? "text-muted-foreground" : "text-amber"}>{done[p] ? "■" : locked ? "□" : "▶"}</span>
+              <span className="label-pixel">{String(i + 1).padStart(2, "0")} {t(PAGE_KEY[p])}</span>
+              <span className="sr-only">{t(done[p] ? "step.done" : locked ? "step.locked" : "step.current")}</span>
+            </TabsTrigger>
+          );
+          return locked ? (
+            <Tooltip key={p}>
+              <TooltipTrigger asChild><span tabIndex={0}>{trigger}</span></TooltipTrigger>
+              <TooltipContent>{t("step.lockedHint")}</TooltipContent>
+            </Tooltip>
+          ) : trigger;
+        })}
+      </TabsList>
     </header>
   );
 
-  const footer = (
-    <footer className="border-t-2 border-line pt-4 text-xs text-muted">{t("shell.footer")}</footer>
-  );
+  const footer = <footer className="border-t-2 border-line pt-4 text-xs text-muted-foreground">{t("shell.footer")}</footer>;
+  const pageClass = "mt-6 space-y-6 data-[state=inactive]:hidden";
 
   if (replay) {
     const f = replay.file;
     return (
-      <div className="space-y-10">
+      <Tabs value={current} onValueChange={(v) => setPage(v as Page)} className="gap-0">
         {header}
-        <div role="status" className="px-frame px-frame-replay sticky top-20 z-10 flex flex-wrap items-center gap-3 p-3 text-sm">
+        <Alert role="status" className="mt-4 flex flex-wrap items-center gap-3 border-2 border-replay/40 bg-replay/10">
           <span className="label-pixel text-replay">REPLAY</span>
-          <span className="font-mono text-xs text-text">{t("replay.recorded", { date: f.recordedAt.slice(0, 10) })} · {f.models.standard} / {f.models.premium}</span>
+          <span className="font-mono text-xs">{t("replay.recorded", { date: f.recordedAt.slice(0, 10) })} · {f.models.standard} / {f.models.premium}</span>
           <span className="ml-auto flex flex-wrap gap-2">
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => play(replay, 1)}>1x</button>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => play(replay, 2)}>2x</button>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => play(replay, "skip")}>{t("replay.skip")}</button>
-            <button type="button" className="btn btn-amber btn-sm" onClick={exitReplay}>{t("replay.exit")}</button>
+            <Button variant="outline" size="sm" onClick={() => play(replay, 1)}>1x</Button>
+            <Button variant="outline" size="sm" onClick={() => play(replay, 2)}>2x</Button>
+            <Button variant="outline" size="sm" onClick={() => { play(replay, "skip"); setPage("final"); }}>{t("replay.skip")}</Button>
+            <Button size="sm" className="bg-amber text-black hover:bg-amber/80" onClick={exitReplay}>{t("replay.exit")}</Button>
           </span>
-        </div>
-        <StyleProfileView profile={f.styleProfile} />
-        <StoryBibleEditor bible={f.bible} language={f.language} onChange={() => undefined} readOnly />
-        <ChapterWorkspace chapterNumber={(replay.pass.chapterNumber as 1 | 2 | 3) ?? null} pass={replay.pass} retriesUsed={replay.pass.retryCount} canStart={false} blockedReason={null} replay onStart={() => undefined} />
-        <FinalStory title={f.bible.logline} chapters={replay.chapters} replay bible={f.bible} />
-        {footer}
-      </div>
+        </Alert>
+        <TabsContent value="style" forceMount className={pageClass}><StyleProfileView profile={f.styleProfile} />{navFooter}</TabsContent>
+        <TabsContent value="bible" forceMount className={pageClass}><StoryBibleEditor bible={f.bible} language={f.language} onChange={() => undefined} readOnly footer={navFooter} /></TabsContent>
+        <TabsContent value="chapters" forceMount className={pageClass}>
+          <ChapterWorkspace chapterNumber={(replay.pass.chapterNumber as 1 | 2 | 3) ?? null} pass={replay.pass} retriesUsed={replay.pass.retryCount} canStart={false} blockedReason={null} replay onStart={() => undefined} />
+          {navFooter}
+        </TabsContent>
+        <TabsContent value="final" forceMount className={pageClass}><FinalStory title={f.bible.logline} chapters={replay.chapters} replay bible={f.bible} />{navFooter}</TabsContent>
+        <div className="mt-12">{footer}</div>
+      </Tabs>
     );
   }
 
   return (
-    <div className="space-y-12">
+    <Tabs value={current} onValueChange={(v) => setPage(v as Page)} className="gap-0">
       {header}
-      <p className="max-w-2xl text-sm text-muted">{t("app.subtitle")}</p>
-      {restoreNotice && <p role="status" className="font-mono text-xs text-signal">✓ {restoreNotice}</p>}
-      {replayButtons}
+      <div className="mt-4 space-y-3">
+        {restoreNotice && <p role="status" className="font-mono text-xs text-signal">✓ {restoreNotice}</p>}
+        {refusal && (
+          <Alert role="alert" className="space-y-2 border-2 border-amber-dim">
+            <AlertDescription className="text-amber">⚠ {t(`err.${refusal}` as MessageKey)} {replayList.length > 0 ? t("top.watchInstead") : ""}</AlertDescription>
+            {replayButtons}
+          </Alert>
+        )}
+      </div>
 
-      <SampleInput onProfile={setProfile} disabled={locked} />
-      {session.styleProfile && <StyleProfileView profile={session.styleProfile} notice={profileNotice} />}
+      <TabsContent value="sample" forceMount className={pageClass}>
+        <p className="max-w-2xl text-sm text-muted-foreground">{t("app.subtitle")}</p>
+        {replayButtons}
+        <SampleInput onProfile={setProfile} disabled={locked} />
+        {navFooter}
+      </TabsContent>
 
-      {session.styleProfile && (
-        <div className="space-y-4">
-          {!locked && (
-            <DraftFromSeed
-              profile={session.styleProfile}
-              bible={bible}
-              onApply={(next, prev) => { setUndo(prev); setSession((s) => ({ ...s, bible: next })); }}
-              onRefused={(c) => setRefusal(c)}
-            />
-          )}
-          {undo && !locked && (
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setSession((s) => ({ ...s, bible: undo })); setUndo(null); }}>↶ {t("top.undo")}</button>
-          )}
-          <StoryBibleEditor bible={bible} language={language} onChange={(b) => setSession((s) => ({ ...s, bible: b }))} readOnly={locked} />
-          {locked && <p className="font-mono text-xs text-muted">▢ {t("top.bibleLocked")}</p>}
-        </div>
-      )}
+      <TabsContent value="style" forceMount className={pageClass}>
+        {session.styleProfile && <StyleProfileView profile={session.styleProfile} notice={profileNotice} />}
+        {navFooter}
+      </TabsContent>
 
-      {refusal && (
-        <div role="alert" className="px-frame px-frame-amber space-y-2 p-4 text-sm text-amber">
-          <p>⚠ {t(`err.${refusal}` as MessageKey)} {replayList.length > 0 ? t("top.watchInstead") : ""}</p>
-          {replayButtons}
-        </div>
-      )}
+      <TabsContent value="bible" forceMount className={pageClass}>
+        {session.styleProfile && (
+          <>
+            {!locked && (
+              <DraftFromSeed
+                profile={session.styleProfile}
+                bible={bible}
+                onApply={(next, prev) => { setUndo(prev); setSession((s) => ({ ...s, bible: next })); }}
+                onRefused={(c) => setRefusal(c)}
+              />
+            )}
+            {undo && !locked && (
+              <Button variant="ghost" size="sm" onClick={() => { setSession((s) => ({ ...s, bible: undo })); setUndo(null); }}>↶ {t("top.undo")}</Button>
+            )}
+            <StoryBibleEditor bible={bible} language={language} onChange={(b) => setSession((s) => ({ ...s, bible: b }))} readOnly={locked} footer={navFooter} />
+            {locked && <p className="font-mono text-xs text-muted-foreground">▢ {t("top.bibleLocked")}</p>}
+          </>
+        )}
+      </TabsContent>
 
-      {session.styleProfile && (
-        <ChapterWorkspace
-          chapterNumber={nextChapter ?? (pass.chapterNumber as 1 | 2 | 3 | null)}
-          pass={passIsForNext || !nextChapter ? pass : EMPTY_PASS}
-          retriesUsed={retriesUsed}
-          canStart={bibleValid && session.pipelineStatus !== "running"}
-          blockedReason={!bibleValid ? t("ws.fixBible") : null}
-          replay={false}
-          onStart={(r) => void start(r)}
-        />
-      )}
-      {!nextChapter && <p className="font-mono text-sm text-signal">✓ {t("top.allAccepted")}</p>}
+      <TabsContent value="chapters" forceMount className={pageClass}>
+        {session.styleProfile && (
+          <ChapterWorkspace
+            chapterNumber={nextChapter ?? (pass.chapterNumber as 1 | 2 | 3 | null)}
+            pass={passIsForNext || !nextChapter ? pass : EMPTY_PASS}
+            retriesUsed={retriesUsed}
+            canStart={bibleValid && session.pipelineStatus !== "running"}
+            blockedReason={!bibleValid ? t("ws.fixBible") : null}
+            replay={false}
+            onStart={(r) => void start(r)}
+          />
+        )}
+        {!nextChapter && (
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="font-mono text-sm text-signal">✓ {t("top.allAccepted")}</p>
+            <Button onClick={() => setPage("final")}>{t("ws.goFinal")} →</Button>
+          </div>
+        )}
+        {navFooter}
+      </TabsContent>
 
-      <FinalStory title={bible.logline} chapters={session.acceptedChapters} replay={false} bible={session.bible} />
-      {IS_DEV && session.acceptedChapters.length === 3 && (
-        <button type="button" className="btn btn-ghost btn-sm text-replay" onClick={() => void downloadReplay()}>{t("top.downloadReplay")}</button>
-      )}
-      {footer}
-    </div>
+      <TabsContent value="final" forceMount className={pageClass}>
+        <FinalStory title={bible.logline} chapters={session.acceptedChapters} replay={false} bible={session.bible} />
+        {IS_DEV && session.acceptedChapters.length === 3 && (
+          <Button variant="outline" size="sm" className="text-replay" onClick={() => void downloadReplay()}>{t("top.downloadReplay")}</Button>
+        )}
+        {navFooter}
+      </TabsContent>
+
+      <div className="mt-12">{footer}</div>
+
+      <AlertDialog open={confirmNew} onOpenChange={setConfirmNew}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("top.newSessionTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("top.newSessionConfirm")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("dialog.cancel")}</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={newSession}>{t("dialog.confirm")}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Tabs>
   );
 }

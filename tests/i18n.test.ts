@@ -20,7 +20,7 @@ describe("UI dictionaries (T-23a)", () => {
   });
   it("every t(\"key\") used in components exists", () => {
     const used = new Set<string>();
-    for (const f of readdirSync("components")) {
+    for (const f of readdirSync("components").filter((x) => x.endsWith(".tsx"))) {
       const src = readFileSync(`components/${f}`, "utf8");
       for (const m of src.matchAll(/\bt\("([\w.-]+)"/g)) used.add(m[1]!);
     }

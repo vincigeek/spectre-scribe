@@ -9,14 +9,14 @@ must not be edited.
 
 ## Phase 1 — Next.js project and shared boundaries
 
-- [ ] **T-01** Initialise or verify the project as a Next.js 15 App Router
+- [x] **T-01** Initialise or verify the project as a Next.js 15 App Router
       application with React 19 and TypeScript. Add Tailwind CSS 4 and the
       shadcn/ui component setup. Confirm `pnpm dev` starts the app.
       *(REQ-17, REQ-23)*
       Progress 2026-11-08: Next.js 15.5.29, React 19.3.1, TypeScript 5.9.3,
       Tailwind 4.3.5, Vitest 5.1.0 installed with pnpm and a lockfile; `next build`
-      passes. shadcn/ui was not added: the UI uses plain semantic HTML with
-      Tailwind (no network CLI step); add shadcn/ui later if wanted.
+      passes. shadcn/ui added 2026-11-08 (radix base, `lyra` preset, themed with
+      the signal-console tokens in `app/globals.css`).
 
 - [x] **T-02** Create the App Router shell in `app/layout.tsx` and
       `app/page.tsx`. Add the workspace navigation for Sample Input, Style

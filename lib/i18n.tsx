@@ -34,7 +34,7 @@ export function LanguageSwitch() {
   return (
     <label className="flex items-center gap-2 text-sm">
       {t("ui.language")}
-      <select value={lang} onChange={(e) => setLang(e.target.value as UiLang)} className="rounded bg-neutral-900 px-2 py-0.5">
+      <select value={lang} onChange={(e) => setLang(e.target.value as UiLang)} className="h-7 border border-input bg-transparent px-2 text-xs">
         <option value="en">English</option>
         <option value="zh-CN">简体中文</option>
       </select>

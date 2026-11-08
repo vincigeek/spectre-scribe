@@ -34,6 +34,15 @@ caught, decoded, and re-broadcast.
 
 ## Page layouts (added 2026-11-07)
 
+**Update 2026-11-08 (owner decision):** the workspace is five switchable pages,
+not one scrolling page. The stepper under the header is a shadcn/ui `Tabs` list
+(`01 Sample`, `02 Style`, `03 Bible`, `04 Chapters`, `05 Final`). A page opens
+only when the earlier step allows it; a locked tab shows a tooltip. Each page
+ends with `Back` / `Next: <page>` buttons. Analysis moves to Style, a restored
+session opens on the furthest page, and replay starts on Chapters. Inactive
+pages stay mounted (hidden) so typed text is not lost. The section layouts
+below still describe each page's content.
+
 One scrolling workspace, five sections in order, one visible section header
 each. Desktop is a centred column (`max-width` ~1100px) unless a section says
 two-pane. Breakpoints: mobile <640px single column, stacked; tablet

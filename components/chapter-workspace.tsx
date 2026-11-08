@@ -4,7 +4,10 @@ import { useI18n, type MessageKey } from "@/lib/i18n";
 import type { PassView } from "@/lib/pass-reducer";
 import { AGENT_ORDER, MAX_RETRIES, type RestartPoint } from "@/lib/pipeline-types";
 import { RelayReceiptView } from "./relay-receipt";
-import { Badge, MonoLabel, Panel, Section, type Status } from "./ui";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { MonoLabel, Panel, Section, StatusBadge, type Status } from "./console";
 
 type Props = {
   chapterNumber: 1 | 2 | 3 | null;
@@ -40,9 +43,9 @@ export function ChapterWorkspace({ chapterNumber, pass, retriesUsed, canStart, b
     <Section id="chapters" number="04" title={t("ws.title").replace(/^\d+ \/ /, "")} subtitle={t("ws.subtitle")}>
       <Panel tone={status === "approved" ? "signal" : status === "veto" || status === "failed" ? "veto" : status === "running" ? "amber" : undefined}>
         <div className="flex flex-wrap items-center gap-3">
-          {chapterNumber && <span className="label-pixel text-sm text-text">{t("ws.chapterOf", { n: chapterNumber })}</span>}
-          <Badge status={status} label={t(`badge.${status === "veto" ? "veto" : status === "approved" ? "approved" : status === "running" ? "running" : status === "failed" ? "failed" : status === "interrupted" ? "interrupted" : "waiting"}` as MessageKey)} />
-          <span className="font-mono text-xs text-muted">{t("ws.attempt", { n: attempt, max: MAX_RETRIES + 1 })}</span>
+          {chapterNumber && <span className="label-pixel text-sm text-foreground">{t("ws.chapterOf", { n: chapterNumber })}</span>}
+          <StatusBadge status={status} label={t(`badge.${status === "veto" ? "veto" : status === "approved" ? "approved" : status === "running" ? "running" : status === "failed" ? "failed" : status === "interrupted" ? "interrupted" : "waiting"}` as MessageKey)} />
+          <span className="font-mono text-xs text-muted-foreground">{t("ws.attempt", { n: attempt, max: MAX_RETRIES + 1 })}</span>
         </div>
 
         <ol className="mt-4 flex flex-wrap items-center gap-2" aria-label={t("ws.progress")}>
@@ -59,7 +62,7 @@ export function ChapterWorkspace({ chapterNumber, pass, retriesUsed, canStart, b
                   <span className="label-pixel">{a}</span>
                   <span className="opacity-80">{label}</span>
                 </span>
-                {i < AGENT_ORDER.length - 1 && <span aria-hidden className="text-muted">→</span>}
+                {i < AGENT_ORDER.length - 1 && <span aria-hidden className="text-muted-foreground">→</span>}
               </li>
             );
           })}
@@ -70,34 +73,36 @@ export function ChapterWorkspace({ chapterNumber, pass, retriesUsed, canStart, b
       </Panel>
 
       {pass.error && (
-        <p role="alert" className="text-sm text-veto">
-          ✕ {t(`err.${pass.error.code}` as MessageKey)} <code className="font-mono text-xs opacity-70">({pass.error.code})</code>
-        </p>
+        <Alert variant="destructive" role="alert">
+          <AlertDescription>✕ {t(`err.${pass.error.code}` as MessageKey)} <code className="font-mono opacity-70">({pass.error.code})</code></AlertDescription>
+        </Alert>
       )}
 
       <div className="grid gap-4 lg:grid-cols-5">
         <Panel className="lg:col-span-3">
           <div className="mb-3 flex items-center justify-between">
             <MonoLabel>{t("ws.prose")}</MonoLabel>
-            {pass.wordCount !== null && <span className="font-mono text-xs text-muted">{t("ws.serverCount", { n: pass.wordCount }).replace(/^ · /, "")}</span>}
+            {pass.wordCount !== null && <span className="font-mono text-xs text-muted-foreground">{t("ws.serverCount", { n: pass.wordCount }).replace(/^ · /, "")}</span>}
           </div>
           {pass.draft ? (
             <div className={`prose-story ${running ? "blink-cursor" : ""}`}>{pass.draft}</div>
           ) : (
-            <p className={`text-sm text-muted ${running ? "blink-cursor" : ""}`}>{t("ws.proseEmpty")}</p>
+            <p className={`text-sm text-muted-foreground ${running ? "blink-cursor" : ""}`}>{t("ws.proseEmpty")}</p>
           )}
         </Panel>
         <Panel className="space-y-4 lg:col-span-2">
           <MonoLabel>{t("ws.rail")}</MonoLabel>
           {beats.length > 0 && (
-            <details open className="text-sm">
-              <summary className="cursor-pointer font-mono text-xs text-muted">{t("ws.beatOutline")}</summary>
+            <Collapsible defaultOpen className="text-sm">
+              <CollapsibleTrigger className="font-mono text-xs text-muted-foreground hover:text-foreground">▾ {t("ws.beatOutline")}</CollapsibleTrigger>
+              <CollapsibleContent>
               <ol className="mt-2 list-decimal space-y-1 pl-5">
-                {beats.map((b, i) => <li key={i}><span className="font-medium text-text">{b.title}</span> <span className="text-muted">— {b.premise}</span></li>)}
+                {beats.map((b, i) => <li key={i}><span className="font-medium text-foreground">{b.title}</span> <span className="text-muted-foreground">— {b.premise}</span></li>)}
               </ol>
-            </details>
+              </CollapsibleContent>
+            </Collapsible>
           )}
-          {pass.receipt ? <RelayReceiptView receipt={pass.receipt} /> : <p className="text-sm text-muted">{t("ws.railEmpty")}</p>}
+          {pass.receipt ? <RelayReceiptView receipt={pass.receipt} /> : <p className="text-sm text-muted-foreground">{t("ws.railEmpty")}</p>}
         </Panel>
       </div>
 
@@ -109,7 +114,7 @@ export function ChapterWorkspace({ chapterNumber, pass, retriesUsed, canStart, b
               <li key={i} className="grid gap-1 text-sm sm:grid-cols-[auto_1fr]">
                 <code className="font-mono text-xs text-veto">{f.checkId} · {f.bibleField}</code>
                 <span>{f.violation}</span>
-                <span className="font-mono text-xs text-muted sm:col-start-2">{t("ws.fix")} {f.fix}</span>
+                <span className="font-mono text-xs text-muted-foreground sm:col-start-2">{t("ws.fix")} {f.fix}</span>
               </li>
             ))}
           </ul>
@@ -122,15 +127,15 @@ export function ChapterWorkspace({ chapterNumber, pass, retriesUsed, canStart, b
       {!replay && chapterNumber && (
         <div className="flex flex-wrap items-center gap-3">
           {!needsRetry && pass.status !== "approved" && (
-            <button type="button" className="btn btn-primary" disabled={!canStart || running} onClick={() => onStart("outline")}>
+            <Button size="lg" className="px-corners-sm" disabled={!canStart || running} onClick={() => onStart("outline")}>
               ▶ {t("ws.write", { n: chapterNumber })}
-            </button>
+            </Button>
           )}
           {needsRetry && retriesLeft > 0 && (
             <>
-              <button type="button" className="btn btn-amber" disabled={!canStart || running} onClick={() => onStart("outline")}>{t("ws.retryOutline")}</button>
-              <button type="button" className="btn btn-ghost" disabled={!canStart || running || !hasCheckpoints} onClick={() => onStart("continuation")}>{t("ws.retryContinuation")}</button>
-              <span className="font-mono text-xs text-muted">{t("ws.retriesLeft", { n: retriesLeft, max: MAX_RETRIES })}</span>
+              <Button className="bg-amber text-black hover:bg-amber/80" disabled={!canStart || running} onClick={() => onStart("outline")}>{t("ws.retryOutline")}</Button>
+              <Button variant="outline" disabled={!canStart || running || !hasCheckpoints} onClick={() => onStart("continuation")}>{t("ws.retryContinuation")}</Button>
+              <span className="font-mono text-xs text-muted-foreground">{t("ws.retriesLeft", { n: retriesLeft, max: MAX_RETRIES })}</span>
             </>
           )}
           {needsRetry && retriesLeft <= 0 && <span className="text-sm text-veto">{t("ws.retriesExhausted", { max: MAX_RETRIES })}</span>}

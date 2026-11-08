@@ -210,6 +210,16 @@ const en = {
   "final.downloadBible": "Story bible (.json)",
   "m.pacing": "Pacing markers",
   "m.pacing.d": "Runs per 100 {unit}: em-dash, ellipsis, sentence end.",
+  "nav.next": "Next: {step}",
+  "nav.back": "Back",
+  "nav.pages": "Workspace pages",
+  "step.lockedHint": "Finish the earlier step first.",
+  "dialog.cancel": "Cancel",
+  "dialog.confirm": "Confirm",
+  "top.newSessionTitle": "Start a new session?",
+  "seed.replaceTitle": "Replace filled fields?",
+  "bible.ready": "The bible passes every check. You can start chapter 1.",
+  "ws.goFinal": "Read the final story",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -421,6 +431,16 @@ const zh: Record<MessageKey, string> = {
   "final.downloadBible": "故事圣经（.json）",
   "m.pacing": "节奏标记",
   "m.pacing.d": "每 100 {unit} 中的次数：破折号、省略号、句末标点。",
+  "nav.next": "下一步：{step}",
+  "nav.back": "上一步",
+  "nav.pages": "工作区页面",
+  "step.lockedHint": "请先完成前一步。",
+  "dialog.cancel": "取消",
+  "dialog.confirm": "确认",
+  "top.newSessionTitle": "开始新会话？",
+  "seed.replaceTitle": "覆盖已填写的内容？",
+  "bible.ready": "故事圣经已通过全部检查，可以开始写第 1 章。",
+  "ws.goFinal": "阅读完整故事",
 };
 
 export type UiLang = "en" | "zh-CN";

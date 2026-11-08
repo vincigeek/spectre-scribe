@@ -1,62 +1,124 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
 
 /*
- * Signal console theme (ux.md "Visual style", confirmed 2026-11-07):
- * dark radio room, phosphor green signal, warm amber relay, pixel display
- * labels only, monospace for machine data, serif for story prose.
+ * Signal console theme (ux.md "Visual style", confirmed 2026-11-07), applied to
+ * the shadcn/ui tokens. Dark only: a late-night radio room. Phosphor green is
+ * the signal, warm amber is the relay in progress, red is a veto.
  */
-@theme {
-  --color-ink: #060a09;
-  --color-panel: #0c1311;
-  --color-panel-2: #111b18;
-  --color-line: #20302a;
-  --color-line-strong: #2f4a40;
-  --color-text: #d6e3dc;
-  --color-muted: #82978d;
-  --color-signal: #3dff8f;
-  --color-signal-dim: #1d7a4a;
-  --color-amber: #ffb547;
-  --color-amber-dim: #7a5216;
-  --color-veto: #ff6b6b;
-  --color-veto-dim: #6e2424;
-  --color-replay: #b69cff;
+:root {
+  color-scheme: dark;
+  --radius: 0rem;
 
+  --background: #060a09;
+  --foreground: #d6e3dc;
+  --card: #0c1311;
+  --card-foreground: #d6e3dc;
+  --popover: #0c1311;
+  --popover-foreground: #d6e3dc;
+  --primary: #3dff8f;
+  --primary-foreground: #04140b;
+  --secondary: #16241f;
+  --secondary-foreground: #d6e3dc;
+  --muted: #111b18;
+  --muted-foreground: #8aa095;
+  --accent: #16241f;
+  --accent-foreground: #3dff8f;
+  --destructive: #ff6b6b;
+  --border: #20302a;
+  --input: #2f4a40;
+  --ring: #3dff8f;
+
+  --signal: #3dff8f;
+  --signal-dim: #1d7a4a;
+  --amber: #ffb547;
+  --amber-dim: #7a5216;
+  --veto: #ff6b6b;
+  --veto-dim: #6e2424;
+  --replay: #b69cff;
+  --line: #20302a;
+  --line-strong: #2f4a40;
+  --ink: #060a09;
+  --panel: #0c1311;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-signal: var(--signal);
+  --color-signal-dim: var(--signal-dim);
+  --color-amber: var(--amber);
+  --color-amber-dim: var(--amber-dim);
+  --color-veto: var(--veto);
+  --color-veto-dim: var(--veto-dim);
+  --color-replay: var(--replay);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-panel: var(--panel);
+
+  --radius-sm: var(--radius);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius);
+  --radius-xl: var(--radius);
+
+  /* Pixel font only for short Latin labels; mono for machine data; serif for prose. */
   --font-pixel: var(--font-silkscreen), ui-monospace, monospace;
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
     "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
-  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Noto Sans Mono CJK SC", "PingFang SC", monospace;
+  --font-heading: var(--font-sans);
+  --font-mono: var(--font-jetbrains), ui-monospace, Menlo, Consolas, "Noto Sans Mono CJK SC", "PingFang SC", monospace;
   --font-serif: "Iowan Old Style", Georgia, "Times New Roman", "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC",
     "SimSun", serif;
 }
 
-:root {
-  color-scheme: dark;
-}
-
-body {
-  background-color: var(--color-ink);
-  color: var(--color-text);
-  font-family: var(--font-sans);
-  /* Faint scanlines over a faint grid. */
-  background-image:
-    repeating-linear-gradient(0deg, rgb(255 255 255 / 0.018) 0 1px, transparent 1px 3px),
-    linear-gradient(rgb(61 255 143 / 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(61 255 143 / 0.035) 1px, transparent 1px);
-  background-size: auto, 32px 32px, 32px 32px;
-  background-attachment: fixed;
-}
-
-::selection {
-  background: var(--color-signal-dim);
-  color: #fff;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background font-sans text-foreground;
+    /* Faint scanlines over a faint grid. */
+    background-image:
+      repeating-linear-gradient(0deg, rgb(255 255 255 / 0.018) 0 1px, transparent 1px 3px),
+      linear-gradient(rgb(61 255 143 / 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(61 255 143 / 0.035) 1px, transparent 1px);
+    background-size: auto, 32px 32px, 32px 32px;
+    background-attachment: fixed;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  ::selection {
+    background: var(--signal-dim);
+    color: #fff;
+  }
 }
 
 @layer components {
-  /* Stepped pixel corners. The inset shadow draws the border inside the clip. */
-  .px-frame {
-    --px-line: var(--color-line);
-    background-color: var(--color-panel);
-    box-shadow: inset 0 0 0 2px var(--px-line);
+  /* Stepped pixel corners for panels, buttons, and tabs. */
+  .px-corners {
     clip-path: polygon(
       0 6px, 3px 6px, 3px 3px, 6px 3px, 6px 0,
       calc(100% - 6px) 0, calc(100% - 6px) 3px, calc(100% - 3px) 3px, calc(100% - 3px) 6px, 100% 6px,
@@ -65,69 +127,21 @@ body {
       6px 100%, 6px calc(100% - 3px), 3px calc(100% - 3px), 3px calc(100% - 6px), 0 calc(100% - 6px)
     );
   }
-  .px-frame-signal { --px-line: var(--color-signal-dim); }
-  .px-frame-amber { --px-line: var(--color-amber-dim); }
-  .px-frame-veto { --px-line: var(--color-veto-dim); background-color: rgb(110 36 36 / 0.18); }
-  .px-frame-replay { --px-line: #4b3d80; background-color: rgb(75 61 128 / 0.25); }
-
+  .px-corners-sm {
+    clip-path: polygon(0 3px, 3px 3px, 3px 0, calc(100% - 3px) 0, calc(100% - 3px) 3px, 100% 3px,
+      100% calc(100% - 3px), calc(100% - 3px) calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%,
+      3px calc(100% - 3px), 0 calc(100% - 3px));
+  }
   .label-pixel {
     font-family: var(--font-pixel);
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
-
   .px-divider {
     height: 4px;
-    background-image: linear-gradient(90deg, var(--color-line-strong) 50%, transparent 50%);
+    background-image: linear-gradient(90deg, var(--line-strong) 50%, transparent 50%);
     background-size: 8px 4px;
   }
-
-  .field {
-    width: 100%;
-    background-color: var(--color-ink);
-    color: var(--color-text);
-    border: 2px solid var(--color-line);
-    padding: 0.375rem 0.625rem;
-    font-size: 0.875rem;
-    line-height: 1.4;
-  }
-  .field:focus-visible {
-    outline: none;
-    border-color: var(--color-signal);
-    box-shadow: 0 0 0 2px rgb(61 255 143 / 0.25);
-  }
-  .field:disabled { opacity: 0.6; }
-  select.field { width: auto; }
-
-  .btn {
-    --btn-bg: var(--color-panel-2);
-    --btn-fg: var(--color-text);
-    --btn-line: var(--color-line-strong);
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    min-height: 2.25rem;
-    padding: 0.35rem 0.9rem;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--btn-fg);
-    background-color: var(--btn-bg);
-    box-shadow: inset 0 0 0 2px var(--btn-line), inset 0 -3px 0 rgb(0 0 0 / 0.35);
-    clip-path: polygon(0 4px, 4px 4px, 4px 0, calc(100% - 4px) 0, calc(100% - 4px) 4px, 100% 4px,
-      100% calc(100% - 4px), calc(100% - 4px) calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%,
-      4px calc(100% - 4px), 0 calc(100% - 4px));
-    cursor: pointer;
-    transition: filter 120ms, transform 60ms;
-  }
-  .btn:hover:not(:disabled) { filter: brightness(1.15); }
-  .btn:active:not(:disabled) { transform: translateY(1px); }
-  .btn:focus-visible { outline: none; box-shadow: inset 0 0 0 2px #fff, inset 0 -3px 0 rgb(0 0 0 / 0.35); }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn-primary { --btn-bg: var(--color-signal); --btn-fg: #04140b; --btn-line: #8dffbf; }
-  .btn-amber { --btn-bg: var(--color-amber); --btn-fg: #1d1203; --btn-line: #ffd79b; }
-  .btn-ghost { --btn-bg: transparent; --btn-line: var(--color-line-strong); }
-  .btn-sm { min-height: 1.75rem; padding: 0.15rem 0.6rem; font-size: 0.75rem; }
-
   .chip {
     display: inline-flex;
     align-items: center;
@@ -135,13 +149,12 @@ body {
     padding: 0.2rem 0.55rem;
     font-family: var(--font-mono);
     font-size: 0.75rem;
-    border: 2px solid var(--color-line);
-    color: var(--color-muted);
+    border: 2px solid var(--line);
+    color: var(--muted-foreground);
   }
-  .chip-done { border-color: var(--color-signal-dim); color: var(--color-signal); }
-  .chip-running { border-color: var(--color-amber); color: var(--color-amber); }
-  .chip-failed { border-color: var(--color-veto); color: var(--color-veto); }
-
+  .chip-done { border-color: var(--signal-dim); color: var(--signal); }
+  .chip-running { border-color: var(--amber); color: var(--amber); }
+  .chip-failed { border-color: var(--veto); color: var(--veto); }
   .prose-story {
     font-family: var(--font-serif);
     font-size: 1.02rem;
@@ -157,18 +170,18 @@ body {
 .blink-cursor::after {
   content: "▌";
   margin-left: 1px;
-  color: var(--color-signal);
+  color: var(--signal);
   animation: blink 1s steps(1) infinite;
 }
 .signal-dot {
   display: inline-block;
   width: 8px;
   height: 8px;
-  background: var(--color-signal);
-  box-shadow: 0 0 8px var(--color-signal);
+  background: var(--signal);
+  box-shadow: 0 0 8px var(--signal);
   animation: pulse-signal 2s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .blink-cursor::after, .signal-dot { animation: none; }
-  .btn { transition: none; }
+  .blink-cursor::after,
+  .signal-dot { animation: none; }
 }
