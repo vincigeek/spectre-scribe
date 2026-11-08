@@ -251,7 +251,7 @@ must not be edited.
       content in the component defaults.
       *(REQ-08, REQ-16e, REQ-18)*
 
-- [ ] **T-23a** (P1; cut first) Add `en` and `zh-CN` string dictionaries for the
+- [x] **T-23a** (P1; cut first) Add `en` and `zh-CN` string dictionaries for the
       UI chrome, a language switch defaulting from the browser language, a
       CJK-capable font fallback, and UTF-8 downloads. The story language stays
       independent of the UI language.
