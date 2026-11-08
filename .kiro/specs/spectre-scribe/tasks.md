@@ -154,7 +154,7 @@ must not be edited.
       the style agent's `targets` fields to the profile (design §2.11).
       *(REQ-09, REQ-11, REQ-12, REQ-27)*
 
-- [ ] **T-15** Implement `lib/pipeline/orchestrator.ts` for one chapter pass.
+- [x] **T-15** Implement `lib/pipeline/orchestrator.ts` for one chapter pass.
       Enforce the outline, style, continuation, continuity order; keep the style
       anchor at most 400 words (700 字 in Chinese); enforce a final draft limit of
       800 words (1,500 字 in Chinese), recounted with `countUnits`; and
