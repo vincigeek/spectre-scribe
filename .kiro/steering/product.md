@@ -15,8 +15,12 @@ These rules are product constraints, not suggestions:
 - The user supplies a sample through paste or `.txt` import. The sample must be the user's
   own writing or public-domain text. The application never crawls, fetches, or recommends
   commercial novel text.
-- Empty input and input shorter than 200 words are rejected before analysis. The same
-  deterministic word-token policy is used for the minimum check and the profile.
+- The app supports English and Chinese. The story language is the language of the sample,
+  detected locally (`requirements.md` REQ-24 to REQ-29). All length rules use one length
+  unit: a word for English, a character (字) for Chinese.
+- Empty input and input shorter than the minimum (200 words for English, 400 字 for
+  Chinese) are rejected before analysis. The same deterministic length-unit policy is used
+  for the minimum check and the profile.
 - Analysis returns exactly the eight metrics in `requirements.md`: sentence-length mean,
   sentence-length standard deviation, vocabulary richness, dialogue ratio, pacing markers,
   paragraph-length mean, paragraph-length standard deviation, and stopword-excluded average
@@ -28,8 +32,8 @@ These rules are product constraints, not suggestions:
   before drafting, and agents receive a validated snapshot that they cannot mutate.
   Its logline, five-sentence synopsis, and per-character goal/motivation/conflict/
   epiphany come from the Snowflake Method (`steering/snowflake.md`): the outline
-  agent expands the plan layer by layer (logline -> paragraph -> one-page synopsis
-  -> beat list), each layer approved before the next starts, and no later layer may
+  agent can draft them from a user seed in two plan layers (`core`, then `structure`),
+  each approved or edited by the user before the next, and no later layer may
   contradict an earlier one.
 - Chapters run through the fixed order `outline -> style -> continuation -> continuity`.
   No agent may be added, removed, reordered, or allowed to accept its own output.
@@ -37,7 +41,8 @@ These rules are product constraints, not suggestions:
   payoff. Foreshadowing status is `open`, `paidOff`, or `deferred`; a deferred item names
   its target chapter, and an open item must be paid off by chapter 3.
 - The demo accepts exactly 3 chapters. A chapter is accepted only after a continuity
-  `APPROVED` result and a server-side word count of at most 800 words.
+  `APPROVED` result and a server-side length count within the chapter limit (800 words
+  for English, 1,500 字 for Chinese).
 - Chapter arc roles are structural, not plot content (the plot, names, and sample
   remain TBD). Chapter 1 establishes the protagonist's goal and conflict, plants at
   least one open foreshadowing item, and ends on a hook or question. Chapter 2
@@ -83,9 +88,11 @@ The calculation policy is:
 
 The token and quotation policies must be explicit in the implementation and tests. Use
 Unicode-aware token matching, locale-independent lowercasing, and a versioned local
-stopword set. Do not fetch a language list at runtime. Do not auto-detect a language or
-reject a non-English sample: non-English tokens remain analyzable, and only tokens in the
-local stopword set are excluded from the final metric. Apostrophes inside words must not be
+stopword list for each language. Do not fetch a language list at runtime. Detect the
+language locally from character scripts (REQ-25), with a user override; never call a
+network service or a model for it. Chinese uses the character-based length unit and the
+rules in REQ-26 and `design.md` section 2.11. A sample in another language is analysed
+with the English rules and a visible notice. Apostrophes inside words must not be
 mistaken for dialogue delimiters. Punctuation used for pacing is counted separately from
 normalized word tokens.
 
@@ -116,8 +123,8 @@ Before a pipeline request, validate at least these invariants:
 Each relay pass receives the named style profile, the complete story-bible snapshot, all
 previously accepted chapters, outputs from earlier agents in the current pass, and any
 structured veto notes. The raw sample passage is not needed after local analysis and is not
-sent to model calls. The server keeps the four agent definitions unchanged and treats their
-files as configuration, not as a place to store story data.
+sent to model calls. The server never modifies the four agent definitions and treats their
+files as read-only configuration, not as a place to store story data.
 
 A continuity `VETO` returns specific failed checks, violated bible fields, and minimal fixes.
 It never rewrites a chapter. The user chooses a permitted retry point. An outline retry
@@ -147,20 +154,29 @@ authority when a feature request conflicts with it.
 ### Can do
 
 - **Analyse a sample.** Paste or import a `.txt` sample of the user's own
-  writing or public-domain text (at least 200 words) and compute exactly the
+  writing or public-domain text (at least 200 words, or 400 字 in Chinese) and compute exactly the
   eight deterministic style metrics. Analysis is local and uses no LLM.
 - **Show the style profile.** Display all eight metrics with their definitions
   as read-only values while the user edits the bible and reviews chapters.
 - **Edit a story bible.** Edit every field of the shared schema: logline,
   five-sentence synopsis, genre, tone, setting, characters (with goal,
   motivation, conflict, epiphany), foreshadowing, timeline, and one beat entry
-  per chapter. The bible starts empty/TBD; only the user fills it.
-- **Plan in Snowflake layers.** Expand the plan layer by layer (logline ->
-  paragraph -> one-page synopsis -> beat list), each layer approved before the
-  next starts, with no later layer contradicting an earlier one.
+  per chapter. The bible starts empty/TBD. The user fills it by hand, or asks
+  for a draft from a short seed and then edits it (REQ-30). No agent writes
+  directly into the bible; a draft enters only through the user's accept action.
+- **Draft the bible in Snowflake layers.** From the user's seed (genre, tone,
+  idea, optional notes), the outline agent drafts two layers: `core` (logline,
+  five-sentence synopsis, setting, characters) and `structure` (foreshadowing,
+  timeline, beat sheet). The user approves or edits each layer before the next.
+  No later layer contradicts an earlier one.
+- **Watch a recorded run.** Replay a real recorded run with no model call and
+  no access code, clearly labelled `REPLAY` (REQ-33).
+- **Protect live mode.** Live model calls need a demo access code and are rate
+  limited per IP and per day (REQ-32).
 - **Run the four-agent relay.** Draft exactly 3 chapters, one at a time, in
   the fixed order `outline -> style -> continuation -> continuity`, streamed
-  over SSE with visible progress. Each chapter is at most 800 words.
+  over SSE with visible progress. Each chapter is at most 800 words (1,500 字 in
+  Chinese).
 - **Check continuity.** Enforce the three checks (character alive/dead,
   timeline order, foreshadowing payoff) plus the chapter arc roles, before any
   chapter is accepted. A `VETO` names the failing check, the violated bible
@@ -184,13 +200,15 @@ authority when a feature request conflicts with it.
 - **No accounts, billing, or server storage.** No sign-up, login, user
   accounts, authentication, billing, database, queue, background job, or
   server-side story store. There is nothing to log into and no story is kept
-  on the server after a request ends.
+  on the server after a request ends. The only server state is rate-limit
+  counters keyed by hashed IP (REQ-32); the demo access code is a shared
+  code, not an account.
 - **No text retrieval.** No crawling, fetching, or recommending of commercial
   novel text or any third-party literary text. The sample comes only from the
   user. The raw sample is not sent to model calls after local analysis and is
   not stored on the server.
-- **No long-form writing.** No more than 3 chapters, no chapter over 800
-  words, no fourth chapter, no series, no multi-book bible, no novel-length
+- **No long-form writing.** No more than 3 chapters, no chapter over the 800-word (1,500 字 in Chinese)
+  limit, no fourth chapter, no series, no multi-book bible, no novel-length
   manuscript.
 - **No open-ended assistant.** No general chatbot, no free-form writing
   companion, no brainstorming chat, no editing of arbitrary user text outside
@@ -203,7 +221,7 @@ authority when a feature request conflicts with it.
   passage, or story title in specifications, defaults, or empty states. Empty
   fields stay empty until the user fills them.
 - **No model choice in the UI.** The model is server configuration
-  (`LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`) only. The UI offers no model
+  (`LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, and the optional `LLM_MODEL_PREMIUM`) only. The UI offers no model
   picker, no bring-your-own-key field, and no provider switching.
 - **No media generation.** No image, audio, or video generation. No
   translation, no summarisation of other books, no plagiarism checking.
@@ -243,7 +261,8 @@ Out of scope:
 - invented demo content in specifications or defaults;
 - crawling or retrieval of third-party literary text;
 - user accounts, authentication, billing, database storage, queues, or background jobs;
-- more than three chapters, chapters over 800 words, or unbounded retries;
+- more than three chapters, chapters over the language chapter limit (800 words or 1,500 字), or unbounded retries;
+- languages other than English and Chinese;
 - automatic full-chapter rewriting after a veto;
 - a general-purpose agent marketplace or provider-specific client in each wrapper.
 

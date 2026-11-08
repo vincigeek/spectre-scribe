@@ -36,7 +36,12 @@ side-effect free.
 - Cover repeated tokens, punctuation-only differences, Unicode letters, non-English text,
   and locale-independent lowercasing. A non-English sample is analyzable; it is not rejected
   merely because the local stopword set does not contain its words.
-- Test the empty, under-200-word, exactly-200-word, and over-200-word validation boundaries.
+- Test the empty, under-minimum, exact-minimum, and over-minimum validation boundaries for both
+  languages (199/200 words, 399/400 字).
+- Cover Chinese text: no spaces, full-width punctuation, `。！？` boundaries, `「」` and `“”`
+  dialogue, nested quotes, `……` and `——` runs, single-line-break paragraphs, Latin words inside
+  Chinese text, Traditional Chinese, detection near the 50% threshold, kanji-heavy Japanese
+  with kana and a Cyrillic-only sample (both "other"), and the segmenter fallback. Build fixtures from neutral characters, not from a story.
 - Assert that direct invalid calls return a typed validation result and never `NaN` or
   `Infinity`.
 - Verify through static review or module mocks that the analyser does not import `fetch`,
@@ -93,7 +98,8 @@ Cover these relay outcomes:
 - a continuity VETO with structured failures and a user-selected outline retry;
 - a continuation retry that reuses valid outline and style checkpoints;
 - missing or invalid checkpoints forcing an outline retry;
-- a draft over 800 words being rejected before acceptance;
+- a draft over the chapter limit (800 words, or 1,500 字 in a Chinese run) being rejected before
+  acceptance;
 - a fourth retry being rejected before any model call;
 - a fourth chapter being rejected before any model call;
 - a provider/configuration failure becoming a safe terminal error.

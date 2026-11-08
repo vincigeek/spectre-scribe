@@ -14,17 +14,23 @@ app/
   api/
     style/analyse/route.ts
     pipeline/stream/route.ts
+    bible/draft/route.ts
 components/
   sample-input.tsx
   style-profile.tsx
   story-bible-editor.tsx
   chapter-workspace.tsx
   final-story.tsx
+  draft-from-seed.tsx
+  replay-player.tsx
   ui/                  # reviewed shadcn/ui primitives
 lib/
   style-analyser.ts    # pure TypeScript functions
+  text-units.ts        # pure: language detection, length units, sentence/paragraph split, limits
   story-bible.ts       # shared schema and validation
   downloads.ts         # browser-side JSON/Markdown downloads
+  replay.ts            # shared ReplayFile schema; browser recorder and player helpers
+  live-gate.ts         # server-only: access code, rate limits, counter store
   pipeline/            # server-only orchestration and model access
     agent-loader.ts
     client.ts
@@ -37,8 +43,8 @@ tests/
   pipeline.test.ts
   sse.test.ts
 .kiro/
-  agents/              # outline, style, continuation, continuity; unchanged
-  hooks/               # continuity-check.md; unchanged
+  agents/              # outline, style, continuation, continuity; read-only to the app
+  hooks/               # continuity-check.md; read-only to the app
   steering/
   specs/spectre-scribe/
 ```
@@ -114,7 +120,7 @@ validated request
   -> style
   -> continuation
   -> continuity
-  -> APPROVED + <=800 words
+  -> APPROVED + within chapter limit (800 words / 1,500 字)
   -> accepted chapter
 ```
 
@@ -134,7 +140,8 @@ A retry after the fourth user-visible failure is rejected before any model call.
 - `/.kiro` remains at the repository root and remains tracked, not ignored.
 - `/.kiro/agents/` and `/.kiro/hooks/` are read-only inputs for this work.
 - Runtime story data never goes into `/.kiro`, `public/`, logs, a database, or a server-side
-  session store.
+  session store. `public/replays/` holds recorded replay files; they are build assets
+  committed by the owner, never written at runtime.
 - `.env` and `.env.local` remain ignored and contain no committed values.
 - The demo plot, names, locations, title, and sample passage remain user-provided/TBD. No
   placeholder story is allowed in component defaults, fixtures, steering, or design.

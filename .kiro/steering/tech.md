@@ -65,6 +65,13 @@ project requirement.
 - Shared story-bible and request types must be usable by both browser and server code. Keep
   them free of Node-only imports. Runtime validation runs again at every Route Handler
   boundary; TypeScript types alone are not trust-boundary validation.
+- Shared text rules live in `lib/text-units.ts` (pure): language detection, length-unit
+  counting, sentence and paragraph splitting, and the per-language limits. Browser and server
+  both import it, so a count never differs between them.
+- Chinese word-level metrics (vocabulary richness, average word length) use the built-in
+  `Intl.Segmenter("zh")`, only in the server route, on the pinned Node 22.x runtime with full
+  ICU. Record `analyserVersion` in the profile and fall back to one character per token if
+  the segmenter is missing. Add no segmentation dependency without a recorded reason.
 - The profile always contains exactly the eight required metrics. The definitions in
   `requirements.md` are the contract; presentation may explain a metric but cannot replace
   it with an LLM-generated style description.
@@ -75,7 +82,8 @@ The server uses one small adapter around standard `fetch`, not a browser SDK and
 provider-specific client in every agent wrapper.
 
 1. Read only `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, and
-   `LLM_MODEL_PREMIUM` (continuity only, see design §2.4) on the server. Missing or
+   `LLM_MODEL_PREMIUM` (optional; continuity only, falls back to `LLM_MODEL` when unset, see
+   design §2.4) on the server. Missing or
    malformed configuration returns a safe configuration error.
 2. Normalize the configured base URL in one module and construct the provider endpoint in
    one place. Do not accept a model endpoint from a browser request. Do not log the URL if it
@@ -110,6 +118,11 @@ Initial output budgets are deliberately bounded and must be constants covered by
 | Style | 900 output tokens | Style anchor no more than 400 words |
 | Continuation | 1,600 output tokens | Final chapter text no more than 800 words |
 | Continuity | 800 output tokens | `APPROVED` or structured `VETO`; no prose rewrite |
+
+The table shows English values. Chinese runs use about 1.6 times the token caps (outline
+1,000, style 1,500, continuation 2,600, continuity 1,300) and the Chinese length limits in
+`requirements.md` REQ-24 (anchor 700 字, chapter 1,500 字). These are starting values; tune them
+in the performance task.
 
 The compatible client must use the token-limit field accepted by the selected provider and
 keep that translation inside the adapter. It must not silently omit a cap. The first provider
@@ -156,7 +169,9 @@ included in performance and cost measurements.
   build output remain the reproducibility boundary.
 - Configure `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, and
   `LLM_MODEL_PREMIUM` separately for Preview and
-  Production in Vercel. Environment changes apply to new deployments, so redeploy after a
+  Production in Vercel. Also configure the live-gate variables `DEMO_ACCESS_CODE`,
+  `RATE_LIMIT_SECRET`, `UPSTASH_REDIS_REST_URL`, and `UPSTASH_REDIS_REST_TOKEN`
+  (design §2.13). Without them, Production runs replay only. Environment changes apply to new deployments, so redeploy after a
   change. None receives a `NEXT_PUBLIC_` prefix.
 - Before an implementation change is considered ready, run the local type check, lint,
   Vitest suite, production build, and the measured no-retry flow. The repository currently

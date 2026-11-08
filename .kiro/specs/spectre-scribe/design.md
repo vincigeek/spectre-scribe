@@ -13,12 +13,15 @@ Browser (React 19)
   ├── SampleInput       ── POST /api/style/analyse ──► style-analyser.ts
   ├── StyleProfile      ◄────── JSON StyleProfile ────┘
   ├── StoryBibleEditor  ── React state + localStorage
+  │     └── DraftFromSeed ── POST /api/bible/draft ──► outline agent (plan mode)
+  ├── ReplayPlayer      ── GET /replays/*.json (no model call)
   ├── ChapterWorkspace  ◄── POST /api/pipeline/stream (SSE)
   └── FinalStory        ── browser JSON/Markdown downloads
                                       │
 Next.js server (Route Handlers and server-only lib/pipeline)
   │
   ├── request/schema validation
+  ├── LiveGate ── access code + rate limits (counter store, §2.13)
   ├── PipelineOrchestrator
   │     ├── OutlineAgent
   │     ├── StyleAgent
@@ -47,8 +50,8 @@ the agents, not a vague prose instruction.
 uses the pinned Next.js 15 App Router, React 19, TypeScript, Tailwind CSS 4, and
 Node.js 22.x as described by the steering files.
 
-`app/api/style/analyse/route.ts` accepts a validated `{ sampleText }` request,
-rejects empty or sub-200-word samples, calls the pure analyser, and returns a
+`app/api/style/analyse/route.ts` accepts a validated `{ sampleText, language? }` request,
+rejects empty or under-minimum samples (§2.11), calls the pure analyser, and returns a
 JSON `StyleProfile`. The route performs no model call and does not fetch sample
 text from another source.
 
@@ -71,33 +74,36 @@ another request.
 
 The analyser is a pure TypeScript module. It accepts the user-supplied string,
 performs no network or file I/O, and returns a serialisable `StyleProfile` or a
-typed validation result. The Route Handler rejects input shorter than 200 words
-before analysis, while direct callers also receive a finite, non-throwing result.
+typed validation result. The Route Handler rejects input shorter than the language minimum
+(§2.11) before analysis, while direct callers also receive a finite, non-throwing result.
 
-The profile keeps these eight fields and calculation rules:
+The profile holds four metadata fields (§2.11): `language` (`en` or `zh`),
+`lengthUnit` (`word` or `char`), `segmentation` (`intl` or `char`), and
+`analyserVersion`. It keeps these eight metric fields and calculation rules:
 
 | Field | Computation |
 | --- | --- |
-| `sentenceLenMean` | Mean words per sentence, with `.`, `!`, and `?` as sentence boundaries |
-| `sentenceLenSD` | Population standard deviation of the sentence word-count list |
-| `typeTokenRatio` | Unique normalized tokens divided by total normalized tokens; lowercased with punctuation removed |
-| `dialogueRatio` | Word tokens inside paired straight or curly quotation marks divided by all word tokens |
-| `pacingMarkers` | Counts per 100 words for em-dashes, ellipses, and sentence-final `.`, `!`, `?` |
-| `paraLenMean` | Mean words per paragraph, splitting paragraphs on blank lines |
-| `paraLenSD` | Population standard deviation of the paragraph word-count list |
-| `avgWordLen` | Mean characters per word after the versioned local stopword set is excluded |
+| `sentenceLenMean` | Mean length units per sentence; boundaries per REQ-26a |
+| `sentenceLenSD` | Population standard deviation of the sentence length-unit list |
+| `typeTokenRatio` | Unique normalized tokens divided by total normalized tokens; lowercased with punctuation removed; `zh` tokens come from the segmenter (§2.11) |
+| `dialogueRatio` | Length units inside paired quotation marks divided by all length units; delimiter set per REQ-26c |
+| `pacingMarkers` | Counts per 100 length units for em-dash runs, ellipsis runs, and sentence-final mark runs |
+| `paraLenMean` | Mean length units per paragraph; split rule per language (REQ-26e) |
+| `paraLenSD` | Population standard deviation of the paragraph length-unit list |
+| `avgWordLen` | Mean characters per token (`en`) or 字 per segmented word (`zh`) after the versioned local stopword set is excluded |
 
-The token policy is shared by the minimum-word check and all calculations. It is
-Unicode-aware, uses locale-independent lowercasing, keeps apostrophes inside
-words from becoming dialogue delimiters, and does not reject non-English text.
-The stopword set is local and versioned; no language list or language detector is
-loaded at runtime. `pacingMarkers` is one metric with three named subcounts.
+The token policy is shared by the minimum-length check and all calculations. It is
+Unicode-aware, uses locale-independent lowercasing, and keeps apostrophes inside
+words from becoming dialogue delimiters. The language (`en` or `zh`) is detected
+locally from character scripts (REQ-25) and selects the length unit and the rules
+in §2.11; no network language detector is used. Each language has its own local,
+versioned stopword list. `pacingMarkers` is one metric with three named subcounts.
 
 The analyser does not call an LLM and does not persist the sample. The style
 profile is held in React session state and is sent as a named input to the style
 agent on every relevant pipeline request. Tests cover empty and short input,
-exactly 200 words, punctuation and quote edge cases, Unicode/non-English text,
-zero variance, and finite numeric output.
+the exact minimum for each language, punctuation and quote edge cases, Chinese
+fixtures (§2.11), zero variance, and finite numeric output.
 
 ### 2.3 Story bible schema and editor (`lib/story-bible.ts`)
 
@@ -110,7 +116,7 @@ type CharacterStatus = "alive" | "dead" | "unknown";
 type StoryBible = {
   genre: string;
   tone: string;
-  logline: string; // Snowflake Step 1: one sentence, at most 15 words, no character names.
+  logline: string; // Snowflake Step 1: one sentence, at most 15 words (30 字 for Chinese; REQ-24), no character names.
   synopsis: string; // Snowflake Step 2: exactly five sentences (setup, disaster 1, midpoint, disaster 2, resolution).
   setting: {
     timePeriod: string;
@@ -167,8 +173,8 @@ to provide a usable role contract, the loader returns a safe configuration error
 rather than inventing a replacement.
 
 `OpenAICompatibleClient` is a small adapter around standard server-side `fetch`.
-It reads `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL` only from the server
-environment, normalizes the base URL in one place, sends the key only in the
+It reads `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, and the optional
+`LLM_MODEL_PREMIUM` only from the server environment, normalizes the base URL in one place, sends the key only in the
 outbound authorization header, and maps provider failures to safe internal errors.
 It uses the Chat Completions-compatible request shape for arbitrary providers. A
 provider-specific token-limit field or equivalent Responses API request is
@@ -178,13 +184,14 @@ body, prompt, key, or credential-bearing URL is sent to the browser.
 Two model tiers (decided 2026-11-07): the standard model `LLM_MODEL` serves
 outline, style, and continuation; the premium model `LLM_MODEL_PREMIUM` serves
 continuity only, because it is the judge and benefits most from the stronger
-model. Initial values: standard `gemini-3.5-flash-lite`, premium
+model. `LLM_MODEL_PREMIUM` is optional: when it is unset, `LLM_MODEL` serves
+continuity too. Initial values: standard `gemini-3.5-flash-lite`, premium
 `gemini-4-argon`. The premium model is slow (a trivial call measured ~48 s at
 default thinking) and expensive, so the orchestrator routes at most three
 premium calls per round (one per chapter) and the adapter sends the premium
 calls with the lowest thinking level the provider supports; a premium call that
 exceeds its per-call deadline fails that pass like any other provider error
-(retry rules in §2.5 apply, still capped at 3 retries). Argon-specific
+(retry rules in §2.4 apply, still capped at 3 retries). Argon-specific
 notes, verified 2026-11-07: thinking tokens bill as output; `temperature`,
 `top_p`, and `top_k` are ignored by this model, so the adapter must not send
 them on premium calls; the half-price introductory rate ($2 input / $10 output
@@ -194,25 +201,23 @@ December rate, since the submission deadline is 2026-12-05.
 `PipelineOrchestrator` assembles a bounded context for one chapter. Every relay
 pass uses the following order:
 
-1. **Outline agent** reads the named style profile, story bible snapshot, and
-   accepted chapters, then produces a strict structured outline of at most eight
-   beats. It does not write final prose. It expands the plan in Snowflake layers
-   (see `steering/snowflake.md`): logline, then five-sentence paragraph, then
-   one-page synopsis, then the beat list that becomes the `beatSheet`. Each
-   layer is a separate bounded outline call, approved by the user before the
-   next layer starts, and a later layer must not contradict an earlier one.
-   The original Snowflake Step 6 (four-page synopsis) is cut for this demo.
+1. **Outline agent** (chapter mode) reads the named style profile, story bible
+   snapshot, and accepted chapters, then produces a strict structured list of at
+   most eight beats for this chapter. It does not write final prose and does not
+   restate the logline or synopsis. The Snowflake layers that build the logline,
+   synopsis, characters, and beat sheet run earlier, in plan mode, when the bible
+   is drafted (§2.12). A chapter pass is one outline call.
 2. **Style agent** reads those inputs plus the outline and produces a style anchor
-   of at most 400 words. It targets the named quantitative metrics and does not
+   of at most 400 words (700 字 in Chinese). It targets the named quantitative metrics and does not
    need to complete the chapter.
 3. **Continuation agent** reads all previous inputs plus the style anchor and
-   produces a complete chapter draft of at most 800 words. Prose may be streamed
+   produces a complete chapter draft of at most 800 words (1,500 字 in Chinese). Prose may be streamed
    upstream, but the server retains and validates the complete text.
 4. **Continuity agent** reads all previous inputs plus the draft and returns
    `APPROVED` or `VETO` with structured failures. It does not rewrite the draft.
 
 Initial output caps are constants: outline 600 tokens, style 900, continuation
-1,600, and continuity 800. Strict JSON Schema is requested for outline and
+1,600, and continuity 800 (English; Chinese caps are in §2.11). Strict JSON Schema is requested for outline and
 continuity when the configured provider supports it. The server still parses and
 validates every result, and treats refusal, incomplete output, invalid JSON, and
 schema mismatch as failures. A continuation result is never accepted from a
@@ -240,8 +245,8 @@ permission, malformed-request, unsupported-schema, refusal, schema, and word-lim
 failures are terminal for that call. Transport retries are measured separately
 from user-visible chapter retries.
 
-The server accepts a chapter only after `APPROVED` and a server word-count check
-of at most 800 words. It then returns the accepted chapter to the browser, which
+The server accepts a chapter only after `APPROVED` and a server length check
+of at most the chapter limit of the story language (800 words or 1,500 字). It then returns the accepted chapter to the browser, which
 adds it to React state and `localStorage`. The client stores a derived continuity
 ledger next to accepted chapters. The ledger records the last accepted character
 statuses and foreshadowing states used for the next check; it is session data,
@@ -357,6 +362,12 @@ failures. The receipt is a client checkpoint like `agent-complete`: it is stored
 in React state and the versioned session record, and the final story renders one
 receipt per accepted chapter. It contains no raw sample, prompt, key, or model
 configuration.
+
+The receipt's `summary` and `changes` strings are built by the orchestrator
+from fixed per-language templates (`en`, `zh`) filled with values from the
+validated agent outputs (beat titles, word counts, metric deltas, check ids).
+No extra model call writes them. Agent-written text that the receipt quotes,
+such as a beat title or a failure `violation`, is already in the story language.
 
 The browser cannot use `EventSource` because this endpoint is POST and carries a
 JSON request body. A client component uses `fetch()` and a `ReadableStream`
@@ -476,7 +487,8 @@ environment changes apply to new deployments, so redeploy after changing them.
 No secret value is committed or printed.
 
 The performance target is the complete sample-analysis plus three-chapter flow
-with no user-visible retries in under 3 minutes. Instrumentation measures each
+with no user-visible retries in under 3 minutes of machine time (REQ-19), for both English and Chinese runs.
+Instrumentation measures each
 Route Handler request, each provider call, output size, transport-retry count,
 stream time, and browser end-to-end time. The orchestrator bounds context to the
 required style profile, bible, accepted chapters, and current-pass outputs so a
@@ -513,8 +525,9 @@ downloads, as the "Lives in" column states. No entity carries a secret.
 // sent to the model after local analysis (see §2.2).
 type Sample = {
   text: string;
-  wordCount: number; // Deterministic local count.
-  meetsThreshold: boolean; // wordCount >= 200.
+  language: "en" | "zh"; // Detected locally (REQ-25); the user may override.
+  wordCount: number; // Length units: words for en, 字 for zh. Deterministic local count.
+  meetsThreshold: boolean; // wordCount >= 200 (en) or >= 400 (zh).
 };
 
 // One accepted chapter. Only a chapter that arrived via a validated
@@ -523,8 +536,8 @@ type Sample = {
 type AcceptedChapter = {
   chapterNumber: 1 | 2 | 3;
   title: string; // User/model-provided chapter title.
-  prose: string; // Full chapter text, at most 800 words by server count.
-  wordCount: number; // Server-side word count, authoritative.
+  prose: string; // Full chapter text, within the chapter limit (800 words or 1,500 字) by server count.
+  wordCount: number; // Server-side length-unit count, authoritative.
   relayReceipt: RelayReceipt; // The receipt of the pass that produced it.
 };
 
@@ -553,7 +566,7 @@ type ContinuityResult = {
   failures: Array<{
     checkId: "A" | "B" | "C" | "ARC"; // A life/death, B timeline, C foreshadowing, ARC arc role.
     bibleField: string; // The violated StoryBible field, e.g. "characters[0].status".
-    message: string; // Plain-language description of the failure.
+    violation: string; // What specifically contradicts the bible, quoting the draft briefly. Same field name as the continuity agent's output contract.
     fix: string; // Minimal suggested fix; the user applies it, the server does not.
   }>;
 };
@@ -600,9 +613,12 @@ client whether a retry control may be offered.
 | `bad-request` | Malformed request payload or failed validation | No |
 | `schema-mismatch` | Model output failed JSON/schema validation | Yes, as a chapter retry |
 | `model-refusal` | Model refused the request | Yes, as a chapter retry |
-| `word-limit` | Draft exceeded the 800-word server limit | Yes, as a chapter retry |
+| `word-limit` | Draft exceeded the server chapter limit (800 words or 1,500 字) | Yes, as a chapter retry |
 | `retry-exhausted` | Chapter retry cap (3) reached | No; edit or start a new session |
 | `interrupted` | Stream aborted or stale run after reload | Yes, as resume/retry |
+| `access-required` | Live mode needs a valid demo access code (HTTP 401) | No; enter the code or watch a replay |
+| `rate-limited` | An app limit of REQ-32 was reached (HTTP 429, `retryAfterSeconds`) | Yes, after the wait |
+| `live-unavailable` | Live mode is off, or the counter store is unreachable in Production | No; watch a replay |
 
 Validation rules that cross entities: a `StoryBible` with an empty required
 field blocks drafting; a `deferred` foreshadowing entry requires
@@ -610,6 +626,318 @@ field blocks drafting; a `deferred` foreshadowing entry requires
 `chapter-accepted` event; a `PipelineRun` with `retryCount > 3` is rejected
 before any model call; a `Session` with an unsupported version is discarded
 with a visible explanation (§2.7).
+
+### 2.11 Language support (English and Chinese)
+
+This section implements REQ-24 to REQ-29. The product keeps one pipeline and one
+set of eight metrics. Only the length unit and a few text rules depend on the
+language.
+
+**Shared module.** `lib/text-units.ts` is pure TypeScript with no I/O. It is
+imported by the analyser, the story bible validator, both Route Handlers, the
+orchestrator, and the browser word counter. It exports `detectLanguage`,
+`countUnits`, `splitSentences`, `splitParagraphs`, and the constant
+`LANGUAGE_LIMITS`. It never calls the segmenter, so the browser counter and the
+server count always agree.
+
+**Limits (initial values, tuned in T-25).**
+
+| Item | `en` | `zh` |
+| --- | ---: | ---: |
+| Minimum sample | 200 words | 400 字 |
+| Logline maximum | 15 words | 30 字 |
+| Style anchor maximum | 400 words | 700 字 |
+| Chapter maximum | 800 words | 1,500 字 |
+| Outline output cap | 600 tokens | 1,000 tokens |
+| Style output cap | 900 tokens | 1,500 tokens |
+| Continuation output cap | 1,600 tokens | 2,600 tokens |
+| Continuity output cap | 800 tokens | 1,300 tokens |
+
+The `zh` token caps are about 1.6 times the `en` caps. They are a starting guess,
+because tokens per 字 differ between model tokenizers.
+
+**Language detection.** `detectLanguage` follows REQ-25 in order. First, if
+hiragana, katakana, hangul, and Thai are at least 5% of letter characters, the
+sample is "other"; this stops kanji-heavy Japanese from being read as Chinese.
+Second, a sample with no Han and no Latin word runs is "other" (this also
+avoids a 0/0 ratio). Otherwise, the sample is `zh` when Han characters are at
+least 50% of Han plus Latin word runs. The
+result is stored in the profile and shown in the Sample Input panel with a
+switch, so a user can correct a wrong guess before analysis. Japanese, Korean,
+and Thai text is not supported. An "other" sample gets the `en` rules and a
+visible notice.
+
+**Style profile metadata.** `StyleProfile` gains `language: "en" | "zh"`,
+`lengthUnit: "word" | "char"`, `segmentation: "intl" | "char"`, and
+`analyserVersion: string`. The eight metric fields keep their names.
+
+**Chinese word segmentation.** Only two metrics need words: `typeTokenRatio` and
+`avgWordLen`. For `zh` they use `Intl.Segmenter("zh", { granularity: "word" })`,
+keeping word-like segments. This runs only in the server route, on the pinned
+Node 22.x runtime with full ICU. Segmentation can differ between ICU versions, so
+the profile records `analyserVersion`. Tests assert exact values only for the
+length-unit metrics. The two segmenter metrics are tested with fixed fixtures on
+the pinned runtime plus range checks. If the segmenter is missing, the analyser
+falls back to one character per token, sets `segmentation: "char"`, and the UI
+notes that vocabulary richness is approximate. The other six metrics do not
+depend on the segmenter.
+
+**Metric rules that differ.** The normative list is REQ-26. In short: sentence
+boundaries include `。！？`; dialogue also accepts `「」` and `『』`; a dash,
+ellipsis, or `?!` run counts once; Chinese paragraphs split on any line break
+because Chinese text rarely uses blank lines between paragraphs.
+
+**Agent contract.** The four agent files are written in English. Each opens
+with a `Run parameters` section saying the block below overrides any number or
+language in the file; the numbers in the files are English defaults. The
+orchestrator appends a run-parameters block to every agent prompt:
+
+```text
+RUN PARAMETERS
+mode: chapter
+chapter_number: 2
+arc_role: escalation
+story_language: zh
+length_unit: 字
+logline_max: 30
+style_anchor_max: 700
+chapter_max: 1500
+Write all prose and free-text fields in the story language.
+Keep JSON keys, enum values, ids, and check ids in English.
+```
+
+This block takes precedence over a number written in an agent file, such as "at
+most 800 words". The style agent reads the eight metrics in the profile's unit,
+so a `zh` sentence-length mean of 28 means 28 字. Server validation does not trust
+the model to count: the orchestrator recounts with `countUnits` and rejects an
+over-limit draft with the `word-limit` error code.
+
+**Field mapping.** The style agent's `targets` object uses longer names than the
+profile. The orchestrator maps them one to one:
+
+| Profile field | Style agent `targets` field |
+| --- | --- |
+| `sentenceLenMean` | `sentenceLengthMean` |
+| `sentenceLenSD` | `sentenceLengthStdDev` |
+| `typeTokenRatio` | `vocabularyRichness` |
+| `dialogueRatio` | `dialogueRatio` |
+| `pacingMarkers` | `pacingMarkersPer100Words` |
+| `paraLenMean` | `paragraphLengthMean` |
+| `paraLenSD` | `paragraphLengthStdDev` |
+| `avgWordLen` | `averageWordLength` |
+
+**UI.** The sample counter shows `NNN / 200 words` or `NNN / 400 字` for the
+detected language. The logline counter uses the same unit. The CJK-capable font
+stack applies to prose and data; the pixel display font is used only for Latin
+labels (see `ux.md`). Chrome strings come from a small `en` and `zh-CN`
+dictionary (REQ-28, P1) and do not use an i18n framework. Downloads are UTF-8.
+
+**Known limits.** Type-token ratio falls as text gets longer, in both
+languages, so profiles of samples with very different lengths are not directly
+comparable. Mixed-language text is treated as the dominant language. Metrics
+describe the sample; they do not prove the generated prose will match.
+
+**Tests.** Chinese fixtures are built programmatically from neutral characters
+and punctuation, not from a story. They cover: 399 and 400 字 boundaries, text
+with no spaces, full-width punctuation, `「」` and `“”` dialogue, nested quotes, a
+`……` run, a `——` run, single-line-break paragraphs, Latin words inside Chinese
+text, Traditional Chinese, the segmenter fallback, detection near the 50%
+threshold, kanji-heavy Japanese with kana (must be "other"), and a sample with
+no Han and no Latin runs (must be "other").
+
+### 2.12 Story bible drafting (outline agent, plan mode)
+
+This section implements REQ-30 and REQ-31. It adds no agent: the outline agent
+runs in `plan` mode. The fixed four-agent order applies to chapter passes.
+
+**Route.** `POST /api/bible/draft` is a Node.js Route Handler that returns JSON,
+not SSE. One request is one layer and one model call on `LLM_MODEL`.
+`maxDuration = 60`. It passes the same live gate as the pipeline (§2.13).
+
+```ts
+type BibleSeed = {
+  genre: string;
+  tone: string;
+  idea: string; // At most two sentences (REQ-26a splitter).
+  notes?: string; // Optional character or setting notes; at most 600 length units.
+};
+
+type BibleDraftRequest = {
+  layer: "core" | "structure";
+  seed: BibleSeed;
+  styleProfile: StyleProfile; // Gives the language and unit.
+  core?: BibleCore; // Required for "structure": the core layer the user accepted.
+};
+
+type BibleCore = Pick<StoryBible, "logline" | "synopsis" | "setting" | "characters">;
+type BibleStructure = Pick<StoryBible, "foreshadowing" | "timeline" | "beatSheet">;
+
+type BibleDraftResponse =
+  | { layer: "core"; draft: BibleCore }
+  | { layer: "structure"; draft: BibleStructure };
+```
+
+**Run parameters.** The block carries `mode: plan`, `layer`, and the language
+fields of §2.11. Output caps: `core` 1,200 tokens (`zh` 2,000), `structure`
+1,200 tokens (`zh` 2,000). These are starting values.
+
+**Server checks.** The server never trusts the model's counts.
+
+| Layer | Deterministic check |
+| --- | --- |
+| `core` | Schema; logline within `logline_max`; logline contains no character name from the same draft; synopsis is exactly 5 sentences; 2 to 4 characters, at least 1 protagonist (REQ-06), all `alive`; unique ids `char-N`; descriptions are 1 sentence |
+| `structure` | Schema; exactly 3 beat-sheet entries for chapters 1 to 3; every `characterStates` map has every core id; 2 to 4 foreshadowing items, all `open`, unique ids `fs-N`; at least one timeline event per chapter; no core field echoed back changed |
+
+A failed check returns `schema-mismatch`. The user may retry a layer at most 3
+times. A seed that the model refuses returns `model-refusal`.
+
+**Client flow.**
+
+```text
+seed form -> [Draft core] -> core preview -> user edits -> [Accept core]
+          -> [Draft structure] -> structure preview -> user edits -> [Accept structure]
+          -> bible complete -> chapter 1
+```
+
+- A preview is shown beside the editor, marked `DRAFT — not in your bible`. It
+  is not sent to any agent until accepted.
+- Accept replaces only that layer's fields. If those fields already hold user
+  text, the UI asks first and keeps one undo step.
+- After `core` is accepted, editing a core field marks an accepted `structure`
+  as stale. The user may keep it or redraft it; validation still runs before
+  chapter 1.
+- The seed is session data. It is saved with the session and not sent with
+  chapter passes.
+
+**Snowflake mapping.** `core` covers Snowflake Steps 1 to 3. `structure` covers
+Steps 4 and 6; the one-page synopsis is the three `beatSheet` premises. See
+`steering/snowflake.md`.
+
+### 2.13 Live gate: access code and rate limits
+
+This section implements REQ-32. `lib/live-gate.ts` is server-only. Both live
+routes call it before validation work that costs money and before any model call.
+
+**Order of checks.**
+
+```text
+request
+  -> live mode on?            no  -> 503 live-unavailable
+  -> IP locked out?           yes -> 429 rate-limited (until lockout ends)
+  -> access code valid?       no  -> 401 access-required (failure counted;
+                                     the 10th starts a 10-min lockout)
+  -> IP concurrency free?     no  -> 429 rate-limited
+  -> IP window has room?      no  -> 429 rate-limited
+  -> daily budget has room?   no  -> 429 rate-limited
+  -> take slot, run, release slot
+```
+
+**Access code.** The user types the code once. The client keeps it in
+`sessionStorage`, never in the `localStorage` session record, a download, or a
+replay. It is sent as the `X-Demo-Access` header. The server compares SHA-256
+digests with `crypto.timingSafeEqual`. Ten wrong codes from one IP in 10 minutes
+lock that IP out for 10 minutes (REQ-32d). The lockout check runs before the code
+check, so a locked-out IP gets 429 even with a valid code. The lock is the key
+`ss:ban:<ipHash>` with a 10-minute expiry. Rotate the code after judging.
+
+**Limits (server constants).**
+
+| Limit | Value |
+| --- | ---: |
+| Live requests at a time, per IP | 1 |
+| Chapter passes per IP per 10 min | 8 |
+| Draft layers per IP per 10 min | 6 |
+| Chapter passes per UTC day, all users | 60 |
+| Draft layers per UTC day, all users | 60 |
+| Wrong codes per IP per 10 min | 10 |
+
+A chapter pass makes at most 4 agent calls plus at most 1 transport retry each,
+so at most 8 calls. A draft layer makes 1 call plus at most 1 retry, so at most 2.
+The daily budget bounds model calls at 60 × 8 + 60 × 2 = 600. Premium calls are
+at most 2 per pass, so at most 120 per day (60 without transport retries).
+
+**Counter store.** Serverless instances do not share memory, so Production uses
+Upstash Redis through its REST API, added through the Vercel Marketplace
+integration "Upstash for Redis". Verified 2026-11-08 on the Upstash pricing and
+billing pages: the free tier gives 1 database, 250 MB, 500K commands per month,
+and 10 GB bandwidth per month. A live request uses about 8 commands, so the daily
+budget of 120 requests is about 1K commands per day, or 30K per month. Refused
+requests also cost 2 to 4 commands each, so heavy abuse traffic could use up
+the monthly quota; the gate then fails closed and the site falls back to replay.
+Adding a payment method moves the account off the free tier, so do not add one
+without a decision. If the Vercel-managed integration creates `KV_REST_API_URL`
+and `KV_REST_API_TOKEN` instead, map them to the names below. Re-check these
+numbers in T-31 before implementation. Variables:
+`UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, and `RATE_LIMIT_SECRET`,
+all server-only. Keys:
+
+| Key | Op | Expiry |
+| --- | --- | --- |
+| `ss:lock:<ipHash>` | `SET NX` | 130 s; deleted when the request ends |
+| `ss:win:<kind>:<ipHash>:<10-min bucket>` | `INCR` | 10 min |
+| `ss:day:<kind>:<UTC date>` | `INCR` | 36 h |
+| `ss:bad:<ipHash>:<10-min bucket>` | `INCR` | 10 min |
+| `ss:ban:<ipHash>` | `SET` when bad count reaches 10 | 10 min |
+
+`ipHash` is HMAC-SHA256 of the client IP with `RATE_LIMIT_SECRET`. The client IP
+is the first `x-forwarded-for` value that Vercel sets; this is trusted only on
+Vercel. No key holds story data. Calls use plain `fetch`, like the model adapter.
+
+**Failure modes.** In Production, a missing or unreachable store makes the gate
+return `live-unavailable`: it fails closed, and replay still works. In local
+development without a store, an in-memory counter applies per process.
+
+**Provider side.** Also set a billing budget and alert in the provider console
+for the premium model. This is a manual step (T-34), not code.
+
+### 2.14 Replay mode
+
+This section implements REQ-33. Replay plays a recorded live run through the
+same UI with no model call. It is the fallback when live mode is refused and a
+safe default for public visitors.
+
+**File format.** Replay files live in `public/replays/` and are listed in
+`public/replays/index.json`. They are static build assets, not runtime output.
+
+```ts
+type ReplayFile = {
+  kind: "spectre-scribe-replay";
+  version: 1;
+  recordedAt: string; // ISO date.
+  appVersion: string;
+  language: "en" | "zh";
+  models: { standard: string; premium: string };
+  styleProfile: StyleProfile;
+  bible: StoryBible;
+  passes: Array<{
+    chapterNumber: 1 | 2 | 3;
+    retryCount: number;
+    restartPoint: "outline" | "continuation";
+    events: Array<{ tMs: number; event: string; data: unknown }>; // tMs from pass start.
+  }>;
+};
+```
+
+**Recording.** Only in `next dev` (`NODE_ENV === "development"`). The SSE parser
+already yields typed events; a recorder appends each one with its time. Text
+deltas are merged into 100 ms buckets to keep the file small. A `Download replay`
+button saves the file after chapter 3. The recorder drops any field that
+REQ-33a forbids and refuses to save a run with no `chapter-accepted` for each
+chapter. Owners should record a run that includes one VETO and retry, so the
+replay shows the continuity check working.
+
+**Playback.** `ReplayPlayer` loads a file, validates it with the shared schemas,
+and feeds its events into the same reducer as a live run, on the recorded clock.
+
+- Speed: 1x, 2x, or skip to end. Gaps between passes shrink to 1.5 s.
+- A `REPLAY · recorded <date> · <standard> / <premium>` banner stays visible.
+- Replay state is separate from the live session: it never overwrites the
+  `localStorage` record. Downloads work and their Markdown header says `Replay`.
+- The 3-minute target does not apply to replay; replay shows the recorded times.
+
+**Entry points.** A `Watch a recorded run` button on the first panel; the
+`?replay=<name>` URL; and an automatic offer on `access-required`,
+`rate-limited`, and `live-unavailable`.
 
 ## 3. Key design decisions
 
@@ -654,3 +982,29 @@ explicitly in each validated payload.
 Unbounded retry loops are unacceptable for a demo. Three retries after the first
 attempt are enough to address continuity failures; after the cap, the UI surfaces
 the failure and lets the user edit the story bible or start a new session.
+
+**Why one length unit per language instead of a token count?**
+Users and judges read words and 字, not tokens. A unit that the browser, the
+server, and the user all compute the same way keeps the limits visible and
+testable. Tokens are used only for output caps inside the model adapter.
+
+**Why a segmenter for only two metrics?**
+Character counting is stable and needs no dictionary, so it drives the six
+length-based metrics and every validation limit. A word segmenter is needed only
+where "word" is the point (vocabulary richness and average word length). Keeping
+it out of the limits means a segmenter change cannot break acceptance rules.
+
+**Why draft the bible with the outline agent instead of a fifth agent?**
+The product fixes four agents. Planning is the outline agent's job, so plan mode
+is the same role at an earlier stage. Two layers, each approved, keep the
+Snowflake rule that a bad early layer is fixed early, at two calls instead of four.
+
+**Why an access code plus a counter store?**
+A public URL with a paid premium model can be drained by anyone. The access code
+stops strangers. The counters cap what a judge or a leaked code can spend. A
+counter store holds no story data, so the no-story-database rule still holds.
+
+**Why replay instead of a hosted demo key?**
+Replay costs nothing, never hits a rate limit, and still shows real output from
+a real run. The banner keeps it honest. Live mode remains for judges who want to
+try their own sample.

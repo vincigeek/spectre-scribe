@@ -34,9 +34,9 @@ must not be edited.
       *(REQ-21)*
 
 - [ ] **T-05** Add server-only configuration loading for `LLM_API_KEY`,
-      `LLM_BASE_URL`, `LLM_MODEL`, and `LLM_MODEL_PREMIUM` (continuity only,
-      see design §2.4). Fail with a safe configuration error when
-      a value is absent. Ensure no value is imported by client components or
+      `LLM_BASE_URL`, `LLM_MODEL`, and the optional `LLM_MODEL_PREMIUM` (continuity
+      only; falls back to `LLM_MODEL`, see design §2.4). Fail with a safe
+      configuration error when a required value is absent. Ensure no value is imported by client components or
       emitted in logs, prompts, SSE events, or downloads.
       *(REQ-17, REQ-22)*
 
@@ -52,15 +52,25 @@ must not be edited.
       length. Keep the exact definitions in requirements §2.2.
       *(REQ-04, REQ-05)*
 
+- [ ] **T-06a** Implement `lib/text-units.ts` as a pure module with
+      `detectLanguage`, `countUnits`, `splitSentences`, `splitParagraphs`, and
+      `LANGUAGE_LIMITS` (design §2.11). Use it from the analyser, the bible
+      validator, both Route Handlers, the orchestrator, and the browser counter.
+      Add Vitest cases for both languages, including the 199/200 word and 399/400
+      字 boundaries.
+      *(REQ-24, REQ-25, REQ-26)*
+
 - [ ] **T-07** Implement `app/api/style/analyse/route.ts`. Validate the sample,
-      reject empty or under-200-word input, call the pure analyser, and return a
+      reject empty or under-minimum input for the detected language (accept an
+      optional language override), call the pure analyser, and return a
       structured JSON profile. The route must not fetch text or call a model.
       *(REQ-01, REQ-02, REQ-03, REQ-05)*
 
 - [ ] **T-08** Add Vitest coverage in `tests/style-analyser.test.ts` for known
       sentence and paragraph lengths, standard deviations, vocabulary ratio,
       no-dialogue input, all-dialogue input, pacing-marker subcounts,
-      stopword-excluded word length, and the 200-word validation error.
+      stopword-excluded word length, the language-minimum validation errors (199/200 words, 399/400 字), and
+      the Chinese cases listed in `testing.md`.
       *(REQ-04, REQ-05)*
 
 - [ ] **T-09** Build `components/sample-input.tsx` and
@@ -83,13 +93,30 @@ must not be edited.
 
 - [ ] **T-11** Validate story bible invariants before a pipeline request: required
       top-level fields, valid role and status values, non-empty one-paragraph world
-      rules, one-sentence character descriptions, `alive` status for new
+      rules, one-sentence character descriptions, at least one `protagonist`
+      (the same rule as the draft check in design §2.12), `alive` status for new
       characters, valid chapter numbers, a state entry for every major character in
       every beat, consistent transitions between adjacent beats,
-      `deferredToChapter` for deferred foreshadowing, and exactly three beat-sheet
-      chapters. Keep the demo plot and character names as user-provided TBD
+      `deferredToChapter` for deferred foreshadowing, exactly three beat-sheet
+      chapters, a logline within the language limit (15 words / 30 字), and a
+      five-sentence synopsis counted with the shared sentence splitter. Keep the demo plot and character names as user-provided TBD
       content rather than adding examples to the specification.
       *(REQ-06, REQ-08, REQ-12)*
+
+- [ ] **T-11a** Implement `app/api/bible/draft/route.ts` and the outline agent's
+      `plan` mode (design §2.12). One request is one layer (`core` or
+      `structure`) and one call on `LLM_MODEL`. Run every deterministic check in
+      the §2.12 table before returning a draft. Return `schema-mismatch` or
+      `model-refusal` on failure. Pass the live gate first.
+      *(REQ-30, REQ-31, REQ-32)*
+
+- [ ] **T-11b** Build `components/draft-from-seed.tsx`: seed form, `core`
+      preview, accept, `structure` preview, accept, redraft with 3 tries per
+      layer, the overwrite prompt with one undo, and the stale-structure notice.
+      Manual entry stays available. Test with mocked responses, including a
+      logline that contains a character name and a structure that changes a
+      core field.
+      *(REQ-12, REQ-30, REQ-31)*
 
 - [ ] **T-12** Implement browser-side download helpers in `lib/downloads.ts`.
       Download the story bible as JSON, each accepted chapter as Markdown, and
@@ -102,10 +129,11 @@ must not be edited.
 ## Phase 4 — Agent access and server orchestration
 
 - [ ] **T-13** Implement a server-only agent definition loader that reads the
-      unchanged files `/.kiro/agents/outline.md`, `style.md`,
+      read-only files `/.kiro/agents/outline.md`, `style.md`,
       `continuation.md`, and `continuity.md` from the repository root. Add an
-      OpenAI-compatible client that uses only the three server environment
-      variables and never exposes the key.
+      OpenAI-compatible client that uses only the server environment
+      variables (`LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, optional
+      `LLM_MODEL_PREMIUM`) and never exposes the key.
       *(REQ-09, REQ-17, REQ-22, REQ-23)*
 
 - [ ] **T-14** Implement server-side wrappers for the outline, style,
@@ -113,12 +141,14 @@ must not be edited.
       style profile, full read-only story bible, previously accepted chapters, and
       earlier outputs from the current relay pass. Include structured VETO notes
       on retries. Keep the fixed order outline -> style -> continuation ->
-      continuity.
-      *(REQ-09, REQ-11, REQ-12)*
+      continuity. Append the run-parameters block (REQ-27) to every prompt and map
+      the style agent's `targets` fields to the profile (design §2.11).
+      *(REQ-09, REQ-11, REQ-12, REQ-27)*
 
 - [ ] **T-15** Implement `lib/pipeline/orchestrator.ts` for one chapter pass.
       Enforce the outline, style, continuation, continuity order; keep the style
-      anchor at most 400 words; enforce a final draft limit of 800 words; and
+      anchor at most 400 words (700 字 in Chinese); enforce a final draft limit of
+      800 words (1,500 字 in Chinese), recounted with `countUnits`; and
       accept a chapter only on `APPROVED`. On `VETO`, return structured failures
       without rewriting the draft. Permit the first attempt plus at most 3
       additional retries, and reject a fourth retry.
@@ -205,6 +235,12 @@ must not be edited.
       content in the component defaults.
       *(REQ-08, REQ-16e, REQ-18)*
 
+- [ ] **T-23a** (P1; cut first) Add `en` and `zh-CN` string dictionaries for the
+      UI chrome, a language switch defaulting from the browser language, a
+      CJK-capable font fallback, and UTF-8 downloads. The story language stays
+      independent of the UI language.
+      *(REQ-28)*
+
 - [ ] **T-24** Run an end-to-end client test covering sample input, style profile,
       story bible editing, one streamed chapter pass, a VETO review, a permitted
       retry, acceptance of chapters 1–3, and final Markdown downloads.
@@ -217,28 +253,65 @@ must not be edited.
 - [ ] **T-25** Measure sample analysis plus all three chapters with no retries from
       the browser. Record Route Handler, model-call, SSE, and end-to-end times;
       tune bounded prompts and stream handling until the complete flow is under
-      3 minutes in the intended deployment environment.
-      *(REQ-19)*
+      3 minutes in the intended deployment environment. Run it in English and in
+      Chinese, and tune the `zh` length limits and token caps (design §2.11)
+      against the measured output.
+      *(REQ-19, REQ-24)*
 
-- [ ] **T-26** Verify that the server rejects any accepted draft over 800 words,
+- [ ] **T-26** Verify that the server rejects any accepted draft over the chapter limit (800 words / 1,500 字),
       a fourth chapter request, a fourth retry, an invalid story bible, and an
       unconfigured model endpoint. Verify that no sample retrieval, database
       write, credential log, or client-side secret exposure exists.
       *(REQ-03, REQ-18, REQ-20, REQ-21, REQ-22)*
 
 - [ ] **T-27** Smoke-test the complete demo flow with a user-owned or
-      public-domain sample of at least 200 words. Confirm all eight metrics, a
+      public-domain sample (at least 200 words, or 400 字 in Chinese). Run it once
+      in English and once in Chinese. Confirm all eight metrics, a
       user-provided TBD story bible, exactly three accepted chapters, continuity
       output, Markdown/JSON downloads, `localStorage` restoration, and the
       under-3-minute no-retry target.
-      *(REQ-02, REQ-04, REQ-06, REQ-16, REQ-18, REQ-19, REQ-20, REQ-21)*
+      *(REQ-02, REQ-04, REQ-06, REQ-16, REQ-18, REQ-19, REQ-20, REQ-21, REQ-29)*
 
 - [ ] **T-28** Connect the GitHub repository to Vercel and verify an automatic
-      deployment from the configured branch. Set the three model variables only
+      deployment from the configured branch. Set the model variables only
       in the deployment environment. The Devpost submission must use the public
       Vercel URL. Do not commit, push, create a branch, or deploy as part of this
       document migration.
       *(REQ-17, REQ-22)*
+
+- [ ] **T-31** Implement `lib/live-gate.ts` (design §2.13): live-mode switch,
+      access code check with constant-time compare and wrong-code lockout,
+      per-IP concurrency lock, per-IP 10-minute windows, and UTC daily budgets
+      on Upstash Redis over REST. Fail closed in Production when the store is
+      missing or unreachable; use an in-memory counter in local development.
+      Hash IPs with `RATE_LIMIT_SECRET`. Wire it into both live routes before
+      any model call. Before writing code, re-check the Upstash free tier and the
+      Vercel integration's variable names against design §2.13 and update the
+      design if they changed.
+      *(REQ-32)*
+
+- [ ] **T-32** Test the live gate with a fake store: missing code, wrong code,
+      lockout after 10 wrong codes, a second concurrent request, the 9th pass in
+      10 minutes, the 61st pass in a day, store down in Production, lock
+      released after an error and after a client abort. Assert that no model
+      call happens on any refusal and that no raw IP or code reaches a log.
+      *(REQ-32)*
+
+- [ ] **T-33** Implement replay (design §2.14): the shared `ReplayFile` schema in
+      `lib/replay.ts`, the dev-only recorder with 100 ms delta buckets and the
+      forbidden-field filter, `components/replay-player.tsx` with 1x/2x/skip,
+      the fixed banner, separate state from the live session, and the three
+      entry points. Test that a replay never calls a Route Handler and never
+      overwrites the `localStorage` session.
+      *(REQ-33)*
+
+- [ ] **T-34** Owner tasks before submission: record one English and one Chinese
+      run (each with at least one VETO and retry) into `public/replays/`; set
+      the live-gate variables in Vercel Production; set a provider billing
+      budget and alert for the premium model; put the access code in the
+      Devpost testing notes (confirm they are visible to judges only); rotate
+      the code after judging.
+      *(REQ-32, REQ-33)*
 
 ---
 
@@ -249,7 +322,11 @@ must not be edited.
       The application must load them without modifying their contents. Completed
       2026-11-07 on the owner's instruction: the four 4-line placeholders were
       replaced with full role prompts and output contracts (outline, style,
-      continuation, continuity). The hook file was not changed.
+      continuation, continuity). The hook file was not changed. Updated
+      2026-11-07 on the owner's instruction: each agent file now opens with a
+      `Run parameters` section, so the server's limits and language override
+      the English defaults in the file; the outline agent gained `plan` and
+      `chapter` modes.
       *(REQ-09, REQ-23)*
 
 - [ ] **T-30** Confirm that `/.kiro/hooks/continuity-check.md` is present and
@@ -265,13 +342,13 @@ must not be edited.
 | ID | Criterion | Verified by |
 | --- | --- | --- |
 | AC-01 | A valid sample produces the eight defined style metrics with the documented calculations | T-06, T-08, T-09 |
-| AC-02 | Empty or under-200-word input is rejected with a Web UI message | T-07, T-09 |
+| AC-02 | Empty or under-minimum input (200 words / 400 字) is rejected with a Web UI message | T-07, T-09 |
 | AC-03 | The editor validates and preserves every story bible field | T-10, T-11 |
 | AC-04 | Each chapter uses the fixed outline -> style -> continuation -> continuity relay | T-14, T-17 |
 | AC-05 | Continuity flags dead-character, timeline-order, and foreshadowing-payoff failures | T-18, T-19, T-20 |
 | AC-06 | A chapter can use at most 3 retries after the first attempt, and a further retry is rejected | T-15, T-17, T-22 |
 | AC-07 | The demo accepts exactly 3 chapters and blocks a fourth | T-22, T-23, T-26 |
-| AC-08 | No accepted chapter exceeds 800 words | T-15, T-22, T-26 |
+| AC-08 | No accepted chapter exceeds its language limit (800 words / 1,500 字) | T-15, T-22, T-26 |
 | AC-09 | A no-retry run of sample analysis plus 3 chapters completes within 3 minutes | T-25, T-27 |
 | AC-10 | Progress and agent output stream through SSE while model access remains server-only | T-05, T-13, T-16, T-21 |
 | AC-11 | The story bible downloads as JSON and chapters/full story download as Markdown | T-12, T-23, T-24 |
@@ -279,3 +356,10 @@ must not be edited.
 | AC-13 | No real key or password is in the repository or browser bundle | T-05, T-17, T-26, T-28 |
 | AC-14 | The demo plot, character names, and sample remain TBD in the specification | T-10, T-23, T-27 |
 | AC-15 | The four agent definitions carry full role prompts and output contracts (completed 2026-11-07; the hook definition is unchanged) and `.kiro` is not gitignored | T-13, T-18, T-29, T-30 |
+| AC-16 | English and Chinese samples are detected locally, analysed with the right length unit, and both complete the full flow | T-06a, T-08, T-14, T-27 |
+| AC-17 | Agent calls carry the run-parameters block and story-language output; server limits use the same unit | T-14, T-15, T-26 |
+| AC-18 | The model variables are `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, and optional `LLM_MODEL_PREMIUM` everywhere in the docs | T-05, T-13 |
+| AC-19 | A seed produces a validated `core` then `structure` draft that the user accepts into the bible; manual entry still works | T-11a, T-11b |
+| AC-20 | Live calls without a valid code, over a limit, or with the store down in Production are refused before any model call | T-31, T-32 |
+| AC-21 | A labelled replay plays the full three-chapter run with no model call and leaves the live session untouched | T-33, T-34 |
+| AC-22 | UI chrome is available in English and Simplified Chinese with a manual switch, independent of the story language (P1) | T-23a |
