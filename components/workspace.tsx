@@ -277,7 +277,7 @@ export function Workspace() {
           )}
         </div>
       </div>
-      <TabsList variant="line" aria-label={t("nav.pages")} className="mt-3 h-auto w-full flex-wrap justify-start gap-1 overflow-visible p-0">
+      <TabsList variant="line" aria-label={t("nav.pages")} className="mt-3 h-auto w-full flex-wrap justify-start gap-1 overflow-visible p-0 group-data-horizontal/tabs:h-auto">
         {PAGES.map((p, i) => {
           const locked = !available[p];
           const trigger = (
@@ -285,7 +285,7 @@ export function Workspace() {
               key={p}
               value={p}
               disabled={locked}
-              className="h-10 flex-none gap-2 px-3 data-active:text-signal group-data-[variant=line]/tabs-list:data-active:after:bg-signal"
+              className="h-10 flex-none gap-2 px-3 data-active:text-signal group-data-[variant=line]/tabs-list:data-active:after:bg-signal group-data-horizontal/tabs:after:bottom-[-2px] group-data-horizontal/tabs:after:h-[3px]"
             >
               <span aria-hidden className={done[p] ? "text-signal" : locked ? "text-muted-foreground" : "text-amber"}>{done[p] ? "■" : locked ? "□" : "▶"}</span>
               <span className="label-pixel">{String(i + 1).padStart(2, "0")} {t(PAGE_KEY[p])}</span>
