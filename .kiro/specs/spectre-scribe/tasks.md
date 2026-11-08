@@ -137,7 +137,7 @@ must not be edited.
 
 ## Phase 4 — Agent access and server orchestration
 
-- [ ] **T-13** Implement a server-only agent definition loader that reads the
+- [x] **T-13** Implement a server-only agent definition loader that reads the
       read-only files `/.kiro/agents/outline.md`, `style.md`,
       `continuation.md`, and `continuity.md` from the repository root. Add an
       OpenAI-compatible client that uses only the server environment
