@@ -313,6 +313,9 @@ must not be edited.
       entry points. Test that a replay never calls a Route Handler and never
       overwrites the `localStorage` session.
       *(REQ-33)*
+      Progress 2026-11-08: `lib/replay.ts` done (schema, recorder with 100 ms
+      delta buckets, forbidden-field scrub, validation, playback schedule) with
+      tests. The player component comes with the UI.
 
 - [ ] **T-34** Owner tasks before submission: record one English and one Chinese
       run (each with at least one VETO and retry) into `public/replays/`; set
