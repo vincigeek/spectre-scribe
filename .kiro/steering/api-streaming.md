@@ -30,7 +30,7 @@ The bible draft endpoint `POST /api/bible/draft` returns JSON, one layer per req
 does not use SSE (design §2.12).
 
 Both live endpoints (`/api/pipeline/stream` and `/api/bible/draft`) pass the live gate
-(design §2.13) before a stream starts. A refusal is a normal JSON response with HTTP 401,
+(design §2.13) before processing the request. A refusal is a normal JSON response with HTTP 401,
 429, or 503 and a stable code (`access-required`, `rate-limited`, `live-unavailable`);
 429 carries `retryAfterSeconds` and a `Retry-After` header. The access code arrives in the
 `X-Demo-Access` header and is never logged.

@@ -93,7 +93,8 @@ must not be edited.
 
 - [ ] **T-11** Validate story bible invariants before a pipeline request: required
       top-level fields, valid role and status values, non-empty one-paragraph world
-      rules, one-sentence character descriptions, `alive` status for new
+      rules, one-sentence character descriptions, at least one `protagonist`
+      (the same rule as the draft check in design §2.12), `alive` status for new
       characters, valid chapter numbers, a state entry for every major character in
       every beat, consistent transitions between adjacent beats,
       `deferredToChapter` for deferred foreshadowing, exactly three beat-sheet
@@ -252,8 +253,10 @@ must not be edited.
 - [ ] **T-25** Measure sample analysis plus all three chapters with no retries from
       the browser. Record Route Handler, model-call, SSE, and end-to-end times;
       tune bounded prompts and stream handling until the complete flow is under
-      3 minutes in the intended deployment environment.
-      *(REQ-19)*
+      3 minutes in the intended deployment environment. Run it in English and in
+      Chinese, and tune the `zh` length limits and token caps (design §2.11)
+      against the measured output.
+      *(REQ-19, REQ-24)*
 
 - [ ] **T-26** Verify that the server rejects any accepted draft over the chapter limit (800 words / 1,500 字),
       a fourth chapter request, a fourth retry, an invalid story bible, and an
@@ -282,7 +285,9 @@ must not be edited.
       on Upstash Redis over REST. Fail closed in Production when the store is
       missing or unreachable; use an in-memory counter in local development.
       Hash IPs with `RATE_LIMIT_SECRET`. Wire it into both live routes before
-      any model call.
+      any model call. Before writing code, re-check the Upstash free tier and the
+      Vercel integration's variable names against design §2.13 and update the
+      design if they changed.
       *(REQ-32)*
 
 - [ ] **T-32** Test the live gate with a fake store: missing code, wrong code,
@@ -353,7 +358,8 @@ must not be edited.
 | AC-15 | The four agent definitions carry full role prompts and output contracts (completed 2026-11-07; the hook definition is unchanged) and `.kiro` is not gitignored | T-13, T-18, T-29, T-30 |
 | AC-16 | English and Chinese samples are detected locally, analysed with the right length unit, and both complete the full flow | T-06a, T-08, T-14, T-27 |
 | AC-17 | Agent calls carry the run-parameters block and story-language output; server limits use the same unit | T-14, T-15, T-26 |
+| AC-18 | The model variables are `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, and optional `LLM_MODEL_PREMIUM` everywhere in the docs | T-05, T-13 |
 | AC-19 | A seed produces a validated `core` then `structure` draft that the user accepts into the bible; manual entry still works | T-11a, T-11b |
 | AC-20 | Live calls without a valid code, over a limit, or with the store down in Production are refused before any model call | T-31, T-32 |
 | AC-21 | A labelled replay plays the full three-chapter run with no model call and leaves the live session untouched | T-33, T-34 |
-| AC-18 | The model variables are `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, and optional `LLM_MODEL_PREMIUM` everywhere in the docs | T-05, T-13 |
+| AC-22 | UI chrome is available in English and Simplified Chinese with a manual switch, independent of the story language (P1) | T-23a |

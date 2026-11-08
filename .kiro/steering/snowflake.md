@@ -110,9 +110,9 @@ call for the whole stack.
    contradict an earlier layer. The continuity agent enforces this: a synopsis
    that breaks the logline, or a beat that breaks the synopsis, is a VETO.
 2. **Approve each layer before expanding it.** The user approves or edits the
-   logline, then the paragraph, then the synopsis, then the scene list. A
-   defect is fixed at the layer where it appears, never patched in a later
-   layer.
+   `core` layer (logline, paragraph, characters), then the `structure` layer
+   (synopsis and scene list). A defect is fixed at the layer where it appears,
+   never patched in a later layer.
 3. **One layer, one bounded call.** Each expansion layer is a separate outline
    call under the outline output cap. Do not ask one call to produce the whole
    stack; the layers exist precisely so a failure is small and local.

@@ -127,7 +127,9 @@ REQ-06: Before chapter drafting begins, the system SHALL create a story bible
         Snowflake Method in `steering/snowflake.md`. The character roster SHALL
         record each character's name, role, initial status (alive for a new
         character), and one-sentence description, plus goal, motivation,
-        conflict, and epiphany. The foreshadowing list SHALL
+        conflict, and epiphany. The roster SHALL contain at least one
+        `protagonist`; there is no upper limit on protagonists, antagonists, or
+        supporting characters beyond the drafting range of REQ-30. The foreshadowing list SHALL
         identify each planted element and its status. `deferred` entries SHALL
         include `deferredToChapter`; a silently dropped item is invalid. The
         beat sheet SHALL contain one entry for each demo chapter and SHALL record
@@ -158,8 +160,8 @@ REQ-09: Chapters SHALL be produced one at a time through four server-side agents
         The definitions are the existing files in `/.kiro/agents/outline.md`,
         `style.md`, `continuation.md`, and `continuity.md`. The server SHALL load
         and call those definitions through an OpenAI-compatible interface. The
-        files are read-only inputs: application code and this specification
-        migration SHALL NOT modify them. They carry full role prompts and output
+        files are read-only inputs: application code SHALL NOT modify them;
+        their contents change only by deliberate owner edit. They carry full role prompts and output
         contracts (authored by the owner on 2026-11-07, T-29); any later change
         to them is a deliberate owner edit. Language-specific limits reach the
         agents through the run-parameters block of REQ-27, which takes
@@ -274,8 +276,9 @@ REQ-22: The server SHALL read model configuration only from the environment
         or password SHALL appear in this repository.
 
 REQ-23: All Kiro configuration SHALL remain under `/.kiro` at the repository root
-        and SHALL NOT be gitignored. This document migration SHALL NOT modify
-        `/.kiro/agents/` or `/.kiro/hooks/`.
+        and SHALL NOT be gitignored. Application code SHALL NOT modify
+        `/.kiro/agents/` or `/.kiro/hooks/` at runtime; their contents change
+        only by deliberate owner edit.
 
 ### 2.8 Language support (English and Chinese)
 
@@ -286,21 +289,27 @@ REQ-24: The system SHALL support samples and generated stories in English (`en`)
 
         | Rule | `en` | `zh` |
         | --- | --- | --- |
-        | Length unit | word | 字: each Han character counts 1; each run of Latin letters or digits counts 1; punctuation counts 0 |
+        | Length unit | word: each run of letters (with inner apostrophes or hyphens) counts 1; each run of digits counts 1; punctuation counts 0 | 字: each Han character counts 1; each run of Latin letters or digits counts 1; kana, hangul, other scripts, emoji, and punctuation count 0 |
         | Minimum sample | 200 | 400 |
         | Logline maximum | 15 | 30 |
         | Style anchor maximum | 400 | 700 |
         | Chapter maximum (REQ-20) | 800 | 1,500 |
 
         The `zh` values are initial values, to be tuned against measured output
-        in T-25.
+        in T-25 and T-27.
 
 REQ-25: Language detection SHALL be local and deterministic, with no network call
-        and no LLM. A sample is `zh` when its Han characters are at least 50% of
-        its Han characters plus its Latin word runs; otherwise it is `en`. The
+        and no LLM. Detection runs in this order:
+
+        1. If hiragana, katakana, hangul, and Thai characters together are at
+           least 5% of the letter characters, the sample is "other".
+        2. Else, if the sample has no Han characters and no Latin word runs,
+           it is "other".
+        3. Else, the sample is `zh` when its Han characters are at least 50% of
+           its Han characters plus its Latin word runs; otherwise it is `en`. The
         detected language SHALL be stored in the style profile and shown to the
-        user, who MAY override it before analysis. A sample in any other language
-        is analysed with the `en` rules, and the Web UI SHALL show a notice that
+        user, who MAY override it before analysis. An "other" sample is analysed
+        with the `en` rules, and the Web UI SHALL show a notice that
         results are reliable only for English and Chinese.
 
 REQ-26: The eight metrics SHALL follow these language-specific rules:
@@ -308,8 +317,9 @@ REQ-26: The eight metrics SHALL follow these language-specific rules:
         a. Sentence boundaries (both languages): `.`, `!`, `?`, `。`, `！`, `？`.
            A closing quote or bracket directly after the mark stays in the same
            sentence. A period between two digits is not a boundary. An ellipsis
-           is not a boundary. A final fragment without a mark counts as one
-           sentence.
+           is not a boundary. A run of boundary marks (`?!`, `。。`, `...`) is one
+           boundary, so no empty sentence is created. A final fragment without
+           a mark counts as one sentence.
         b. Vocabulary richness and average word length: `en` tokens are Unicode
            letter runs (apostrophes and hyphens inside a word stay in it); `zh`
            tokens are the word-like segments from `Intl.Segmenter("zh")` with
@@ -357,6 +367,9 @@ REQ-30: The user SHALL be able to ask for a story bible draft instead of filling
         outline agent in `plan` mode SHALL draft the bible in two layers, each one
         bounded call:
 
+        The idea is at most two sentences; the notes are at most 600 length
+        units.
+
         a. `core`: logline, five-sentence synopsis, setting, and two to four
            characters with goal, motivation, conflict, and epiphany.
         b. `structure`: two to four `open` foreshadowing items, the timeline, and
@@ -384,11 +397,17 @@ REQ-32: Live model calls SHALL be protected against abuse on the public URL:
         b. Requests SHALL be limited per client IP: at most 1 live request at a
            time, 8 chapter passes and 6 draft layers per 10 minutes.
         c. All live requests together SHALL be limited per UTC day: at most 60
-           chapter passes and 60 draft layers. This also caps premium-model calls
-           at 60 per day.
-        d. A refused request SHALL return HTTP 401 or 429 with a stable error
-           code and, for 429, a retry-after time. No model call SHALL happen.
-        e. Limits are server constants. The counters hold no story data and no
+           chapter passes and 60 draft layers. Each chapter pass makes at most
+           2 premium-model calls (1 continuity call plus 1 transport retry), so
+           premium calls are capped at 120 per day (60 without retries). Draft
+           layers use only the standard model.
+        d. Ten wrong access codes from one IP within 10 minutes SHALL lock that
+           IP out of live mode for 10 minutes. A locked-out request SHALL be
+           refused with HTTP 429 `rate-limited`, even with a valid code.
+        e. A refused request SHALL return HTTP 401, 429, or 503 with a stable
+           error code and, for 429, a retry-after time. No model call SHALL
+           happen.
+        f. Limits are server constants. The counters hold no story data and no
            raw IP address; the IP is hashed with a server secret.
 
 REQ-33: The app SHALL offer a replay mode that plays a recorded run with no model
@@ -397,8 +416,10 @@ REQ-33: The app SHALL offer a replay mode that plays a recorded run with no mode
         a. A replay file holds the style profile, the story bible, the full
            ordered pipeline event stream with relative times, and metadata
            (record date, language, standard and premium model names, app
-           version). It SHALL NOT hold the raw sample, prompts, keys, provider
-           responses, or IP data.
+           version). It holds the generated agent outputs as they appear in the
+           app's own SSE events. It SHALL NOT hold the raw sample, prompts, keys,
+           unprocessed provider payloads (raw response envelopes, token-usage
+           records, request metadata), or IP data.
         b. The UI SHALL play a replay through the same components and state
            rules as a live run, at 1x, 2x, or skip-to-end. It SHALL be labelled
            `REPLAY` with the record date and model names at all times.

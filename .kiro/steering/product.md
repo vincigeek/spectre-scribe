@@ -162,7 +162,8 @@ authority when a feature request conflicts with it.
   five-sentence synopsis, genre, tone, setting, characters (with goal,
   motivation, conflict, epiphany), foreshadowing, timeline, and one beat entry
   per chapter. The bible starts empty/TBD. The user fills it by hand, or asks
-  for a draft from a short seed and then edits it (REQ-30). No agent writes it.
+  for a draft from a short seed and then edits it (REQ-30). No agent writes
+  directly into the bible; a draft enters only through the user's accept action.
 - **Draft the bible in Snowflake layers.** From the user's seed (genre, tone,
   idea, optional notes), the outline agent drafts two layers: `core` (logline,
   five-sentence synopsis, setting, characters) and `structure` (foreshadowing,

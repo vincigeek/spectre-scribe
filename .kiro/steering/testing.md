@@ -40,8 +40,8 @@ side-effect free.
   languages (199/200 words, 399/400 字).
 - Cover Chinese text: no spaces, full-width punctuation, `。！？` boundaries, `「」` and `“”`
   dialogue, nested quotes, `……` and `——` runs, single-line-break paragraphs, Latin words inside
-  Chinese text, Traditional Chinese, detection near the 50% threshold, and the segmenter
-  fallback. Build fixtures from neutral characters, not from a story.
+  Chinese text, Traditional Chinese, detection near the 50% threshold, kanji-heavy Japanese
+  with kana and a Cyrillic-only sample (both "other"), and the segmenter fallback. Build fixtures from neutral characters, not from a story.
 - Assert that direct invalid calls return a typed validation result and never `NaN` or
   `Infinity`.
 - Verify through static review or module mocks that the analyser does not import `fetch`,

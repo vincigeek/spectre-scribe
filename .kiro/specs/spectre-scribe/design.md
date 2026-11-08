@@ -77,7 +77,9 @@ performs no network or file I/O, and returns a serialisable `StyleProfile` or a
 typed validation result. The Route Handler rejects input shorter than the language minimum
 (§2.11) before analysis, while direct callers also receive a finite, non-throwing result.
 
-The profile keeps these eight fields and calculation rules:
+The profile holds four metadata fields (§2.11): `language` (`en` or `zh`),
+`lengthUnit` (`word` or `char`), `segmentation` (`intl` or `char`), and
+`analyserVersion`. It keeps these eight metric fields and calculation rules:
 
 | Field | Computation |
 | --- | --- |
@@ -189,7 +191,7 @@ default thinking) and expensive, so the orchestrator routes at most three
 premium calls per round (one per chapter) and the adapter sends the premium
 calls with the lowest thinking level the provider supports; a premium call that
 exceeds its per-call deadline fails that pass like any other provider error
-(retry rules in §2.5 apply, still capped at 3 retries). Argon-specific
+(retry rules in §2.4 apply, still capped at 3 retries). Argon-specific
 notes, verified 2026-11-07: thinking tokens bill as output; `temperature`,
 `top_p`, and `top_k` are ignored by this model, so the adapter must not send
 them on premium calls; the half-price introductory rate ($2 input / $10 output
@@ -360,6 +362,12 @@ failures. The receipt is a client checkpoint like `agent-complete`: it is stored
 in React state and the versioned session record, and the final story renders one
 receipt per accepted chapter. It contains no raw sample, prompt, key, or model
 configuration.
+
+The receipt's `summary` and `changes` strings are built by the orchestrator
+from fixed per-language templates (`en`, `zh`) filled with values from the
+validated agent outputs (beat titles, word counts, metric deltas, check ids).
+No extra model call writes them. Agent-written text that the receipt quotes,
+such as a beat title or a failure `violation`, is already in the story language.
 
 The browser cannot use `EventSource` because this endpoint is POST and carries a
 JSON request body. A client component uses `fetch()` and a `ReadableStream`
@@ -648,12 +656,16 @@ server count always agree.
 The `zh` token caps are about 1.6 times the `en` caps. They are a starting guess,
 because tokens per 字 differ between model tokenizers.
 
-**Language detection.** `detectLanguage` counts Han characters and Latin word
-runs. The sample is `zh` when Han characters are at least 50% of the sum. The
+**Language detection.** `detectLanguage` follows REQ-25 in order. First, if
+hiragana, katakana, hangul, and Thai are at least 5% of letter characters, the
+sample is "other"; this stops kanji-heavy Japanese from being read as Chinese.
+Second, a sample with no Han and no Latin word runs is "other" (this also
+avoids a 0/0 ratio). Otherwise, the sample is `zh` when Han characters are at
+least 50% of Han plus Latin word runs. The
 result is stored in the profile and shown in the Sample Input panel with a
 switch, so a user can correct a wrong guess before analysis. Japanese, Korean,
-and Thai text is not supported. A sample in another language gets the `en` rules
-and a visible notice.
+and Thai text is not supported. An "other" sample gets the `en` rules and a
+visible notice.
 
 **Style profile metadata.** `StyleProfile` gains `language: "en" | "zh"`,
 `lengthUnit: "word" | "char"`, `segmentation: "intl" | "char"`, and
@@ -729,8 +741,9 @@ describe the sample; they do not prove the generated prose will match.
 and punctuation, not from a story. They cover: 399 and 400 字 boundaries, text
 with no spaces, full-width punctuation, `「」` and `“”` dialogue, nested quotes, a
 `……` run, a `——` run, single-line-break paragraphs, Latin words inside Chinese
-text, Traditional Chinese, the segmenter fallback, and detection near the 50%
-threshold.
+text, Traditional Chinese, the segmenter fallback, detection near the 50%
+threshold, kanji-heavy Japanese with kana (must be "other"), and a sample with
+no Han and no Latin runs (must be "other").
 
 ### 2.12 Story bible drafting (outline agent, plan mode)
 
@@ -772,7 +785,7 @@ fields of §2.11. Output caps: `core` 1,200 tokens (`zh` 2,000), `structure`
 
 | Layer | Deterministic check |
 | --- | --- |
-| `core` | Schema; logline within `logline_max`; logline contains no character name from the same draft; synopsis is exactly 5 sentences; 2 to 4 characters, exactly 1 protagonist, at most 1 antagonist, all `alive`; unique ids `char-N`; descriptions are 1 sentence |
+| `core` | Schema; logline within `logline_max`; logline contains no character name from the same draft; synopsis is exactly 5 sentences; 2 to 4 characters, at least 1 protagonist (REQ-06), all `alive`; unique ids `char-N`; descriptions are 1 sentence |
 | `structure` | Schema; exactly 3 beat-sheet entries for chapters 1 to 3; every `characterStates` map has every core id; 2 to 4 foreshadowing items, all `open`, unique ids `fs-N`; at least one timeline event per chapter; no core field echoed back changed |
 
 A failed check returns `schema-mismatch`. The user may retry a layer at most 3
@@ -810,7 +823,9 @@ routes call it before validation work that costs money and before any model call
 ```text
 request
   -> live mode on?            no  -> 503 live-unavailable
-  -> access code valid?       no  -> 401 access-required (failures counted)
+  -> IP locked out?           yes -> 429 rate-limited (until lockout ends)
+  -> access code valid?       no  -> 401 access-required (failure counted;
+                                     the 10th starts a 10-min lockout)
   -> IP concurrency free?     no  -> 429 rate-limited
   -> IP window has room?      no  -> 429 rate-limited
   -> daily budget has room?   no  -> 429 rate-limited
@@ -821,7 +836,9 @@ request
 `sessionStorage`, never in the `localStorage` session record, a download, or a
 replay. It is sent as the `X-Demo-Access` header. The server compares SHA-256
 digests with `crypto.timingSafeEqual`. Ten wrong codes from one IP in 10 minutes
-lock that IP out for 10 minutes. Rotate the code after judging.
+lock that IP out for 10 minutes (REQ-32d). The lockout check runs before the code
+check, so a locked-out IP gets 429 even with a valid code. The lock is the key
+`ss:ban:<ipHash>` with a 10-minute expiry. Rotate the code after judging.
 
 **Limits (server constants).**
 
@@ -835,11 +852,22 @@ lock that IP out for 10 minutes. Rotate the code after judging.
 | Wrong codes per IP per 10 min | 10 |
 
 A chapter pass makes at most 4 agent calls plus at most 1 transport retry each,
-so the daily budget bounds model calls at about 60 × 8 + 60 × 2.
+so at most 8 calls. A draft layer makes 1 call plus at most 1 retry, so at most 2.
+The daily budget bounds model calls at 60 × 8 + 60 × 2 = 600. Premium calls are
+at most 2 per pass, so at most 120 per day (60 without transport retries).
 
 **Counter store.** Serverless instances do not share memory, so Production uses
 Upstash Redis through its REST API, added through the Vercel Marketplace
-(verify the current integration name and free tier before setup). Variables:
+integration "Upstash for Redis". Verified 2026-11-08 on the Upstash pricing and
+billing pages: the free tier gives 1 database, 250 MB, 500K commands per month,
+and 10 GB bandwidth per month. A live request uses about 8 commands, so the daily
+budget of 120 requests is about 1K commands per day, or 30K per month. Refused
+requests also cost 2 to 4 commands each, so heavy abuse traffic could use up
+the monthly quota; the gate then fails closed and the site falls back to replay.
+Adding a payment method moves the account off the free tier, so do not add one
+without a decision. If the Vercel-managed integration creates `KV_REST_API_URL`
+and `KV_REST_API_TOKEN` instead, map them to the names below. Re-check these
+numbers in T-31 before implementation. Variables:
 `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, and `RATE_LIMIT_SECRET`,
 all server-only. Keys:
 
@@ -849,6 +877,7 @@ all server-only. Keys:
 | `ss:win:<kind>:<ipHash>:<10-min bucket>` | `INCR` | 10 min |
 | `ss:day:<kind>:<UTC date>` | `INCR` | 36 h |
 | `ss:bad:<ipHash>:<10-min bucket>` | `INCR` | 10 min |
+| `ss:ban:<ipHash>` | `SET` when bad count reaches 10 | 10 min |
 
 `ipHash` is HMAC-SHA256 of the client IP with `RATE_LIMIT_SECRET`. The client IP
 is the first `x-forwarded-for` value that Vercel sets; this is trusted only on

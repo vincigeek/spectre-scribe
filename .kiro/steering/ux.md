@@ -258,7 +258,8 @@ no control or route.
 - Provide a labelled textarea for paste and a labelled `.txt` file input.
 - Explain that the text must be the user's own writing or public-domain text. Do not offer
   retrieval, crawling, or commercial-text suggestions.
-- Show a deterministic word count and the 200-word threshold before submitting analysis.
+- Show a deterministic length count and the language's minimum threshold (200 words or
+  400 字) before submitting analysis.
 - Keep the sample transient by default. Do not put it in a prompt, event, download, log, or
   `localStorage` record unless an owner later changes the privacy decision.
 - Show an inline error that names the problem and how to fix it. Preserve the user's input

@@ -68,8 +68,8 @@ puts it into the story bible.
 ```
 
 - `synopsis` has exactly five sentences in the fixed roles above.
-- `characters` has two to four entries: exactly one `protagonist`, at most one
-  `antagonist`. Every new character is `alive`. Ids are `char-1`, `char-2`, and
+- `characters` has two to four entries, with at least one `protagonist`.
+  Several protagonists are allowed. Every new character is `alive`. Ids are `char-1`, `char-2`, and
   so on.
 - Keep the seed's genre, tone, and idea. Do not contradict a seed note.
 
