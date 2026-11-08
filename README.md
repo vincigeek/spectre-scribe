@@ -48,6 +48,44 @@ The sample must contain at least 200 words (English) or 400 字 (Chinese) and mu
 
 The story bible can be downloaded as JSON. Accepted chapters and the complete story can be downloaded as Markdown files. Session state is restored from `localStorage`; the server does not persist story data.
 
+## Test environment (mock model)
+
+The repository ships a test-only mock model so the full flow runs without a real key.
+
+```text
+# 1. Settings (git-ignored). Use a mock key for the test environment.
+cat > .env.local <<EOF
+LLM_API_KEY=mock-not-a-secret
+LLM_BASE_URL=http://127.0.0.1:8787/v1
+LLM_MODEL=mock-standard
+LLM_MODEL_PREMIUM=mock-premium
+DEMO_ACCESS_CODE=<pick-a-code>
+RATE_LIMIT_SECRET=<random-string>
+LIVE_GATE_MEMORY_STORE=1
+EOF
+
+# 2. Build, then start the mock model and the app.
+pnpm build
+scripts/serve-test.sh
+
+# 3. End-to-end check (English and Chinese).
+set -a; . ./.env.local; set +a
+BASE_URL=http://<host>:8000 node scripts/e2e-smoke.mjs en
+BASE_URL=http://<host>:8000 node scripts/e2e-smoke.mjs zh
+```
+
+The mock vetoes chapter 2 once to exercise the retry path. Never record a demo replay from the mock; replays must come from real runs (REQ-33d). To use a real model, replace the four `LLM_*` lines and restart.
+
+`LIVE_GATE_MEMORY_STORE=1` keeps rate-limit counters in memory. It is only for a single-server test deployment; on Vercel use Upstash (`UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`).
+
+## Checks
+
+```text
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
 ## Deploy and submit
 
 Connect the GitHub repository to Vercel. A push to the configured GitHub branch triggers the Vercel deployment. The Devpost submission should use the resulting public online URL, not a local development address. This documentation does not perform a commit, push, branch creation, or deployment.

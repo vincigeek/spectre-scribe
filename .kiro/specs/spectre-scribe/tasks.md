@@ -9,31 +9,41 @@ must not be edited.
 
 ## Phase 1 — Next.js project and shared boundaries
 
-- [ ] **T-01** Initialise or verify the project as a Next.js 15 App Router
+- [x] **T-01** Initialise or verify the project as a Next.js 15 App Router
       application with React 19 and TypeScript. Add Tailwind CSS 4 and the
       shadcn/ui component setup. Confirm `pnpm dev` starts the app.
       *(REQ-17, REQ-23)*
+      Progress 2026-11-08: Next.js 15.5.29, React 19.3.1, TypeScript 5.9.3,
+      Tailwind 4.3.5, Vitest 5.1.0 installed with pnpm and a lockfile; `next build`
+      passes. shadcn/ui added 2026-11-08 (radix base, `lyra` preset, themed with
+      the signal-console tokens in `app/globals.css`).
 
-- [ ] **T-02** Create the App Router shell in `app/layout.tsx` and
+- [x] **T-02** Create the App Router shell in `app/layout.tsx` and
       `app/page.tsx`. Add the workspace navigation for Sample Input, Style
       Profile, Story Bible, Chapter Workspace, and Final Story using accessible
       shadcn/ui primitives.
       *(REQ-16)*
 
-- [ ] **T-03** Define shared TypeScript schemas in `lib/story-bible.ts` for
+- [x] **T-03** Define shared TypeScript schemas in `lib/story-bible.ts` for
       `StyleProfile`, `StoryBible`, `Character`, `ForeshadowingEntry`, timeline
       events, beat-sheet entries, accepted chapters, and pipeline status. Validate
       the same schemas in the browser and at every Route Handler boundary.
       *(REQ-06, REQ-07, REQ-21)*
+      Progress 2026-11-08: `StyleProfile` (`lib/style-profile.ts`) and `StoryBible`
+      (`lib/story-bible.ts`) types and parsers are done. Accepted chapter and
+      pipeline status types are still open.
 
-- [ ] **T-04** Add the client session model. Keep the style profile, editable
+- [x] **T-04** Add the client session model. Keep the style profile, editable
       bible, pending relay result, accepted chapters, derived continuity ledger,
       retry counters, and pipeline status in React state, and synchronise
       serialisable session data to `localStorage`. Do not create a database or
       server-side story store.
       *(REQ-21)*
+      Progress 2026-11-08: pure session helpers done in `lib/session.ts`
+      (create, derive ledger, serialise, validated restore). The React hook is
+      wired with the UI.
 
-- [ ] **T-05** Add server-only configuration loading for `LLM_API_KEY`,
+- [x] **T-05** Add server-only configuration loading for `LLM_API_KEY`,
       `LLM_BASE_URL`, `LLM_MODEL`, and the optional `LLM_MODEL_PREMIUM` (continuity
       only; falls back to `LLM_MODEL`, see design §2.4). Fail with a safe
       configuration error when a required value is absent. Ensure no value is imported by client components or
@@ -44,7 +54,7 @@ must not be edited.
 
 ## Phase 2 — Pure style analysis
 
-- [ ] **T-06** Implement `lib/style-analyser.ts` as a pure TypeScript module. Export
+- [x] **T-06** Implement `lib/style-analyser.ts` as a pure TypeScript module. Export
       a style-analysis function and compute all eight required metrics:
       sentence-length mean, sentence-length standard deviation, type-token ratio,
       dialogue ratio, pacing-marker counts per 100 words, paragraph-length mean,
@@ -52,7 +62,7 @@ must not be edited.
       length. Keep the exact definitions in requirements §2.2.
       *(REQ-04, REQ-05)*
 
-- [ ] **T-06a** Implement `lib/text-units.ts` as a pure module with
+- [x] **T-06a** Implement `lib/text-units.ts` as a pure module with
       `detectLanguage`, `countUnits`, `splitSentences`, `splitParagraphs`, and
       `LANGUAGE_LIMITS` (design §2.11). Use it from the analyser, the bible
       validator, both Route Handlers, the orchestrator, and the browser counter.
@@ -60,20 +70,20 @@ must not be edited.
       字 boundaries.
       *(REQ-24, REQ-25, REQ-26)*
 
-- [ ] **T-07** Implement `app/api/style/analyse/route.ts`. Validate the sample,
+- [x] **T-07** Implement `app/api/style/analyse/route.ts`. Validate the sample,
       reject empty or under-minimum input for the detected language (accept an
       optional language override), call the pure analyser, and return a
       structured JSON profile. The route must not fetch text or call a model.
       *(REQ-01, REQ-02, REQ-03, REQ-05)*
 
-- [ ] **T-08** Add Vitest coverage in `tests/style-analyser.test.ts` for known
+- [x] **T-08** Add Vitest coverage in `tests/style-analyser.test.ts` for known
       sentence and paragraph lengths, standard deviations, vocabulary ratio,
       no-dialogue input, all-dialogue input, pacing-marker subcounts,
       stopword-excluded word length, the language-minimum validation errors (199/200 words, 399/400 字), and
       the Chinese cases listed in `testing.md`.
       *(REQ-04, REQ-05)*
 
-- [ ] **T-09** Build `components/sample-input.tsx` and
+- [x] **T-09** Build `components/sample-input.tsx` and
       `components/style-profile.tsx`. Support paste and `.txt` import, show the
       validation error, trigger analysis, and render all eight metrics with their
       definitions as read-only values.
@@ -83,7 +93,7 @@ must not be edited.
 
 ## Phase 3 — Story bible and downloads
 
-- [ ] **T-10** Implement the story bible editor in
+- [x] **T-10** Implement the story bible editor in
       `components/story-bible-editor.tsx`. Expose editable genre and tone;
       setting time period, locations, and world rules; character id/name/role/
       status/description; foreshadowing id/description/status/deferred chapter;
@@ -91,7 +101,7 @@ must not be edited.
       with character states.
       *(REQ-06, REQ-07, REQ-08, REQ-16c)*
 
-- [ ] **T-11** Validate story bible invariants before a pipeline request: required
+- [x] **T-11** Validate story bible invariants before a pipeline request: required
       top-level fields, valid role and status values, non-empty one-paragraph world
       rules, one-sentence character descriptions, at least one `protagonist`
       (the same rule as the draft check in design §2.12), `alive` status for new
@@ -103,14 +113,14 @@ must not be edited.
       content rather than adding examples to the specification.
       *(REQ-06, REQ-08, REQ-12)*
 
-- [ ] **T-11a** Implement `app/api/bible/draft/route.ts` and the outline agent's
+- [x] **T-11a** Implement `app/api/bible/draft/route.ts` and the outline agent's
       `plan` mode (design §2.12). One request is one layer (`core` or
       `structure`) and one call on `LLM_MODEL`. Run every deterministic check in
       the §2.12 table before returning a draft. Return `schema-mismatch` or
       `model-refusal` on failure. Pass the live gate first.
       *(REQ-30, REQ-31, REQ-32)*
 
-- [ ] **T-11b** Build `components/draft-from-seed.tsx`: seed form, `core`
+- [x] **T-11b** Build `components/draft-from-seed.tsx`: seed form, `core`
       preview, accept, `structure` preview, accept, redraft with 3 tries per
       layer, the overwrite prompt with one undo, and the stale-structure notice.
       Manual entry stays available. Test with mocked responses, including a
@@ -118,7 +128,7 @@ must not be edited.
       core field.
       *(REQ-12, REQ-30, REQ-31)*
 
-- [ ] **T-12** Implement browser-side download helpers in `lib/downloads.ts`.
+- [x] **T-12** Implement browser-side download helpers in `lib/downloads.ts`.
       Download the story bible as JSON, each accepted chapter as Markdown, and
       the complete three-chapter story as an ordered Markdown file. Do not write
       runtime output under `/.kiro` or on the server filesystem.
@@ -128,7 +138,7 @@ must not be edited.
 
 ## Phase 4 — Agent access and server orchestration
 
-- [ ] **T-13** Implement a server-only agent definition loader that reads the
+- [x] **T-13** Implement a server-only agent definition loader that reads the
       read-only files `/.kiro/agents/outline.md`, `style.md`,
       `continuation.md`, and `continuity.md` from the repository root. Add an
       OpenAI-compatible client that uses only the server environment
@@ -136,7 +146,7 @@ must not be edited.
       `LLM_MODEL_PREMIUM`) and never exposes the key.
       *(REQ-09, REQ-17, REQ-22, REQ-23)*
 
-- [ ] **T-14** Implement server-side wrappers for the outline, style,
+- [x] **T-14** Implement server-side wrappers for the outline, style,
       continuation, and continuity agents. Assemble each prompt from the named
       style profile, full read-only story bible, previously accepted chapters, and
       earlier outputs from the current relay pass. Include structured VETO notes
@@ -145,7 +155,7 @@ must not be edited.
       the style agent's `targets` fields to the profile (design §2.11).
       *(REQ-09, REQ-11, REQ-12, REQ-27)*
 
-- [ ] **T-15** Implement `lib/pipeline/orchestrator.ts` for one chapter pass.
+- [x] **T-15** Implement `lib/pipeline/orchestrator.ts` for one chapter pass.
       Enforce the outline, style, continuation, continuity order; keep the style
       anchor at most 400 words (700 字 in Chinese); enforce a final draft limit of
       800 words (1,500 字 in Chinese), recounted with `countUnits`; and
@@ -154,7 +164,7 @@ must not be edited.
       additional retries, and reject a fourth retry.
       *(REQ-09, REQ-10, REQ-14, REQ-20)*
 
-- [ ] **T-16** Implement `app/api/pipeline/stream/route.ts` as an SSE Route
+- [x] **T-16** Implement `app/api/pipeline/stream/route.ts` as an SSE Route
       Handler. Validate the chapter number, style profile, story bible, accepted
       chapters, derived continuity ledger, retry count, and veto context. Emit typed
       agent-start,
@@ -162,7 +172,7 @@ must not be edited.
       terminal done events. Keep all orchestration and model access on the server.
       *(REQ-15, REQ-17, REQ-18, REQ-21)*
 
-- [ ] **T-17** Test the orchestration with mocked model responses: a first-pass
+- [x] **T-17** Test the orchestration with mocked model responses: a first-pass
       approval, a VETO followed by a user-requested retry and approval, a retry
       from the continuation stage, and a chapter that fails after three retries.
       Verify that all prompts contain the required read-only context and that no
@@ -173,7 +183,7 @@ must not be edited.
 
 ## Phase 5 — Continuity checks
 
-- [ ] **T-18** Load and apply `/.kiro/hooks/continuity-check.md` as the base
+- [x] **T-18** Load and apply `/.kiro/hooks/continuity-check.md` as the base
       continuity contract without changing it. Add the demo-specific deferred
       state, final-chapter payoff, and structured-result rules in the server-side
       continuity stage. Ensure the full continuity stage checks character
@@ -181,20 +191,26 @@ must not be edited.
       continuation draft and before acceptance.
       *(REQ-13, REQ-23)*
 
-- [ ] **T-19** Parse continuity output into `APPROVED` or structured `VETO`
+- [x] **T-19** Parse continuity output into `APPROVED` or structured `VETO`
       results. Every VETO item must identify the failing check, violated story
       bible field, specific violation, and minimal suggested fix. Preserve open
       items, require `deferredToChapter` for deferred items, and require all open
       foreshadowing to be paid off in chapter 3.
       *(REQ-13, REQ-14)*
 
-- [ ] **T-20** Add tests for a dead character appearing after death, an event out
+- [x] **T-20** Add tests for a dead character appearing after death, an event out
       of timeline order, an unaddressed open foreshadowing item, a valid deferred
       item, and a final-chapter payoff. Confirm the continuity code never rewrites
       a draft.
       *(REQ-13, REQ-14)*
+      Audit 2026-11-08: tests in `tests/continuity-stage.test.ts`. Check A
+      (dead character acting) is also enforced on the server: an outline beat
+      naming a character dead in the ledger or an earlier beat-sheet entry is
+      rejected unless its premise marks a flashback, memory, or ghost. Check B
+      (timeline order) stays a continuity-agent judgement; the tests cover that
+      its VETO blocks acceptance and reaches the user intact.
 
-- [ ] **T-20a** Enforce the chapter arc roles (P0): the outline agent tags each
+- [x] **T-20a** Enforce the chapter arc roles (P0): the outline agent tags each
       chapter setup-plus-hook / escalation / payoff, Chapter 2 beats contain at
       least one disaster-or-reversal beat, continuity requires at least one open
       foreshadowing item after Chapter 1 and all items paid off after Chapter 3.
@@ -202,7 +218,7 @@ must not be edited.
       invented here.
       *(REQ-13, REQ-14)*
 
-- [ ] **T-20b** Emit one `relay-receipt` SSE event per completed pass (P0),
+- [x] **T-20b** Emit one `relay-receipt` SSE event per completed pass (P0),
       approved or vetoed, before `done`: per-agent summary and concrete changes,
       every foreshadowing status transition in the pass, and the continuity
       status with failures. Store it as a client checkpoint and session record.
@@ -213,7 +229,7 @@ must not be edited.
 
 ## Phase 6 — Streaming workspace and final story
 
-- [ ] **T-21** Build `components/chapter-workspace.tsx`. Start the SSE request for
+- [x] **T-21** Build `components/chapter-workspace.tsx`. Start the SSE request for
       the current chapter, show agent progress, and render the beat outline,
       draft, and continuity result. Show a green `APPROVED` state or a red `VETO`
       state with failing items and fixes. Render the relay receipt for the pass
@@ -222,26 +238,26 @@ must not be edited.
       point and send the VETO context back in the next request.
       *(REQ-10, REQ-15, REQ-16d)*
 
-- [ ] **T-22** Enforce the chapter state machine in the client: do not add a
+- [x] **T-22** Enforce the chapter state machine in the client: do not add a
       chapter until the server sends `APPROVED` and the word-count check passes;
       keep retry count across reloads; allow no more than 3 retries after the
       first attempt; and disable the next-chapter action after chapter 3.
       *(REQ-10, REQ-18, REQ-20, REQ-21)*
 
-- [ ] **T-23** Build `components/final-story.tsx`. Render the exactly three
+- [x] **T-23** Build `components/final-story.tsx`. Render the exactly three
       accepted chapters in order, show their titles, and expose individual and
       complete-story Markdown downloads. Show one collapsible relay receipt per
       accepted chapter. Do not invent demo plot or character
       content in the component defaults.
       *(REQ-08, REQ-16e, REQ-18)*
 
-- [ ] **T-23a** (P1; cut first) Add `en` and `zh-CN` string dictionaries for the
+- [x] **T-23a** (P1; cut first) Add `en` and `zh-CN` string dictionaries for the
       UI chrome, a language switch defaulting from the browser language, a
       CJK-capable font fallback, and UTF-8 downloads. The story language stays
       independent of the UI language.
       *(REQ-28)*
 
-- [ ] **T-24** Run an end-to-end client test covering sample input, style profile,
+- [x] **T-24** Run an end-to-end client test covering sample input, style profile,
       story bible editing, one streamed chapter pass, a VETO review, a permitted
       retry, acceptance of chapters 1–3, and final Markdown downloads.
       *(REQ-01, REQ-07, REQ-15, REQ-16, REQ-18)*
@@ -258,7 +274,7 @@ must not be edited.
       against the measured output.
       *(REQ-19, REQ-24)*
 
-- [ ] **T-26** Verify that the server rejects any accepted draft over the chapter limit (800 words / 1,500 字),
+- [x] **T-26** Verify that the server rejects any accepted draft over the chapter limit (800 words / 1,500 字),
       a fourth chapter request, a fourth retry, an invalid story bible, and an
       unconfigured model endpoint. Verify that no sample retrieval, database
       write, credential log, or client-side secret exposure exists.
@@ -279,7 +295,7 @@ must not be edited.
       document migration.
       *(REQ-17, REQ-22)*
 
-- [ ] **T-31** Implement `lib/live-gate.ts` (design §2.13): live-mode switch,
+- [x] **T-31** Implement `lib/live-gate.ts` (design §2.13): live-mode switch,
       access code check with constant-time compare and wrong-code lockout,
       per-IP concurrency lock, per-IP 10-minute windows, and UTC daily budgets
       on Upstash Redis over REST. Fail closed in Production when the store is
@@ -290,20 +306,23 @@ must not be edited.
       design if they changed.
       *(REQ-32)*
 
-- [ ] **T-32** Test the live gate with a fake store: missing code, wrong code,
+- [x] **T-32** Test the live gate with a fake store: missing code, wrong code,
       lockout after 10 wrong codes, a second concurrent request, the 9th pass in
       10 minutes, the 61st pass in a day, store down in Production, lock
       released after an error and after a client abort. Assert that no model
       call happens on any refusal and that no raw IP or code reaches a log.
       *(REQ-32)*
 
-- [ ] **T-33** Implement replay (design §2.14): the shared `ReplayFile` schema in
+- [x] **T-33** Implement replay (design §2.14): the shared `ReplayFile` schema in
       `lib/replay.ts`, the dev-only recorder with 100 ms delta buckets and the
       forbidden-field filter, `components/replay-player.tsx` with 1x/2x/skip,
       the fixed banner, separate state from the live session, and the three
       entry points. Test that a replay never calls a Route Handler and never
       overwrites the `localStorage` session.
       *(REQ-33)*
+      Progress 2026-11-08: `lib/replay.ts` done (schema, recorder with 100 ms
+      delta buckets, forbidden-field scrub, validation, playback schedule) with
+      tests. The player component comes with the UI.
 
 - [ ] **T-34** Owner tasks before submission: record one English and one Chinese
       run (each with at least one VETO and retry) into `public/replays/`; set
@@ -329,7 +348,7 @@ must not be edited.
       `chapter` modes.
       *(REQ-09, REQ-23)*
 
-- [ ] **T-30** Confirm that `/.kiro/hooks/continuity-check.md` is present and
+- [x] **T-30** Confirm that `/.kiro/hooks/continuity-check.md` is present and
       defines the character-status, timeline-order, and foreshadowing-payoff
       checks. Confirm that `/.kiro` is at the repository root and is not
       gitignored.
