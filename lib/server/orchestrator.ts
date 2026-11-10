@@ -20,6 +20,7 @@ import {
 import type { CharacterStatus, ForeshadowingStatus, StoryBible } from "@/lib/story-bible";
 import type { StyleProfile } from "@/lib/style-profile";
 import { countUnits, LANGUAGE_LIMITS } from "@/lib/text-units";
+import { canonicaliseChapterProse } from "@/lib/prose";
 import { dialogueRatio } from "@/lib/style-analyser";
 import { checkOutline, checkStyle } from "./agent-output";
 import type { AgentDefinitions } from "./agent-loader";
@@ -176,7 +177,7 @@ export async function runChapterPass(input: PassInput, deps: PassDeps): Promise<
     let acceptedDraft: string | undefined;
     for (let attempt = 0; attempt < MAX_CONTINUATION_ATTEMPTS; attempt++) {
       ctx.continuationIssues = continuationIssues;
-      const candidate = (await call("continuation")).trim();
+      const candidate = canonicaliseChapterProse((await call("continuation")).trim());
       const count = countUnits(candidate, lang);
       const issues: string[] = [];
       if (count < limits.chapterMin) issues.push(`The draft has ${count} ${limits.unitLabel}; at least ${limits.chapterMin} is required.`);

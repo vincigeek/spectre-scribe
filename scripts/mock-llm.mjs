@@ -2,8 +2,9 @@
 /**
  * Test-only OpenAI-compatible mock model (POST /v1/chat/completions).
  * It reads the agent role from the system prompt and the run parameters and data
- * sections from the user message, then returns output that passes the server
- * checks. Chapter 2 is vetoed once (no VETO NOTES yet) to exercise the retry path.
+ * sections from the user message, then exercises the server's length feedback
+ * path before passing the checks. Chapter 2 is vetoed once (no VETO NOTES yet)
+ * to exercise the user retry path.
  * Never use it for a demo replay: replays must come from real runs (REQ-33d).
  *
  * Usage: node scripts/mock-llm.mjs [port]   (binds 127.0.0.1 only)
@@ -53,8 +54,9 @@ function style(user, n) {
 }
 
 /**
- * Drafts sit between chapter_min and chapter_max with about a third dialogue, so
- * they pass the server's length and dialogue floors (lib/text-units.ts).
+ * English's first response is intentionally about 591 words so the server's
+ * measured feedback path is exercised; a repair response is about 843 words.
+ * Both keep about a third dialogue and remain below the soft 960-word guidance.
  */
 function draft(user, n) {
   const zh = param(user, "story_language") === "zh";
@@ -62,8 +64,10 @@ function draft(user, n) {
     const para = `${"这是测试用的模拟正文。".repeat(3)}甲说：“今晚我们要守住这个信号。”乙答：“我们一定会守住这个信号。”`;
     return `# 模拟第${n}章\n\n${Array.from({ length: 23 }, () => para).join("\n")}`;
   }
+  const repair = user.includes("<<<DRAFT CHECKS FAILED ON THE PREVIOUS ATTEMPT");
   const para = `${"This is mock prose for the test environment. ".repeat(3)}"We keep the signal steady tonight," one voice said. "We keep the signal steady tonight," another voice said.`;
-  return `# Mock Chapter ${n}\n\n${Array.from({ length: 18 }, () => para).join("\n\n")}`;
+  const repeats = repair ? 20 : 14;
+  return `# Mock Chapter ${n}\n\n${Array.from({ length: repeats }, () => para).join("\n\n")}`;
 }
 
 function verdict(user, n) {

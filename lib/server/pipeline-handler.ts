@@ -5,6 +5,7 @@
  */
 import "server-only";
 import { MAX_RETRIES, type AcceptedChapter, type ContinuityFailure } from "@/lib/pipeline-types";
+import { canonicaliseChapterProse } from "@/lib/prose";
 import { formatSse, KEEP_ALIVE } from "@/lib/sse";
 import { parseStoryBible, type CharacterStatus, type ForeshadowingStatus } from "@/lib/story-bible";
 import { parseStyleProfile } from "@/lib/style-profile";
@@ -69,7 +70,9 @@ export function parsePipelineRequest(body: unknown): ParsedRequest {
   const accepted: AcceptedChapter[] = [];
   for (const [i, c] of chapters.entries()) {
     if (!isRecord(c) || c.chapterNumber !== i + 1 || typeof c.prose !== "string" || typeof c.title !== "string") return bad("An accepted chapter is invalid.");
-    accepted.push(structuredClone(c) as AcceptedChapter);
+    const chapter = structuredClone(c) as AcceptedChapter;
+    chapter.prose = canonicaliseChapterProse(chapter.prose);
+    accepted.push(chapter);
   }
 
   const ledger = body.continuityLedger;

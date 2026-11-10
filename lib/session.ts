@@ -12,6 +12,7 @@ import {
 } from "./pipeline-types";
 import type { StoryBible } from "./story-bible";
 import { parseStyleProfile } from "./style-profile";
+import { canonicaliseChapterProse } from "./prose";
 
 export const SESSION_STORAGE_KEY = "spectre-scribe:session:v1";
 
@@ -50,7 +51,9 @@ export function deriveLedger(bible: StoryBible, accepted: readonly AcceptedChapt
 }
 
 export function serialiseSession(session: Session): string {
-  return JSON.stringify(session);
+  const copy = structuredClone(session);
+  copy.acceptedChapters = copy.acceptedChapters.map((chapter) => ({ ...chapter, prose: canonicaliseChapterProse(chapter.prose) }));
+  return JSON.stringify(copy);
 }
 
 type Rec = Record<string, unknown>;
@@ -103,7 +106,11 @@ export function restoreSession(raw: string | null): RestoreResult {
   if (data.bible !== null && !isBibleShape(data.bible)) return fail;
   const chapters = data.acceptedChapters;
   if (!Array.isArray(chapters) || chapters.length > 3 || !chapters.every(isAcceptedChapter)) return fail;
-  const numbers = chapters.map((c) => c.chapterNumber);
+  const acceptedChapters = (structuredClone(chapters) as AcceptedChapter[]).map((chapter) => ({
+    ...chapter,
+    prose: canonicaliseChapterProse(chapter.prose),
+  }));
+  const numbers = acceptedChapters.map((c) => c.chapterNumber);
   if (numbers.some((n, i) => n !== i + 1)) return fail; // chapters are 1..k in order
   const counters = data.retryCounters;
   if (!isRecord(counters) || !Object.values(counters).every((n) => Number.isInteger(n) && (n as number) >= 0 && (n as number) <= MAX_RETRIES)) {
@@ -117,8 +124,8 @@ export function restoreSession(raw: string | null): RestoreResult {
     version: SESSION_VERSION,
     styleProfile,
     bible: bible ? structuredClone(bible) : null,
-    acceptedChapters: structuredClone(chapters),
-    continuityLedger: bible ? deriveLedger(bible, chapters) : { characterStatuses: {}, foreshadowing: {} },
+    acceptedChapters,
+    continuityLedger: bible ? deriveLedger(bible, acceptedChapters) : { characterStatuses: {}, foreshadowing: {} },
     retryCounters: structuredClone(counters) as Session["retryCounters"],
     // A run cannot survive a reload; it becomes a resumable/interrupted state.
     pipelineStatus: status === "running" ? "awaiting-retry" : (status as Session["pipelineStatus"]),

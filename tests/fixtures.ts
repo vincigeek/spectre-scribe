@@ -27,7 +27,7 @@ export function zhSentence(n: number, offset = 0): string {
 }
 
 /**
- * A draft that clears the length minimum (640 words) and the 30% dialogue
+ * A draft that clears the length minimum (640 words) and the 25% dialogue
  * minimum: 60 repeats of a two-line spoken exchange under a title heading
  * (662 words, ~99% dialogue). Reuse wherever a pass must accept.
  */

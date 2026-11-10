@@ -5,6 +5,7 @@
  */
 import type { AcceptedChapter, AgentName, ContinuityResult, ErrorCode, RelayReceipt } from "./pipeline-types";
 import { isErrorCode } from "./pipeline-types";
+import { canonicaliseChapterProse } from "./prose";
 
 export type PassView = {
   runId: string | null;
@@ -33,6 +34,12 @@ type Rec = Record<string, unknown>;
 const isRecord = (v: unknown): v is Rec => typeof v === "object" && v !== null && !Array.isArray(v);
 const AGENTS: readonly string[] = ["outline", "style", "continuation", "continuity"];
 
+function canonicalChapter(chapter: AcceptedChapter): AcceptedChapter {
+  const copy = structuredClone(chapter);
+  copy.prose = canonicaliseChapterProse(copy.prose);
+  return copy;
+}
+
 function isAccepted(v: unknown, chapterNumber: number | null): v is AcceptedChapter {
   return isRecord(v) && v.chapterNumber === chapterNumber && typeof v.prose === "string" && typeof v.title === "string"
     && Number.isInteger(v.wordCount) && isRecord(v.relayReceipt);
@@ -57,7 +64,7 @@ export function passReducer(state: PassView, action: PassAction): PassView {
     case "agent-start":
       return AGENTS.includes(d.agent as string) ? { ...state, currentAgent: d.agent as AgentName } : state;
     case "agent-delta":
-      return d.agent === "continuation" && typeof d.text === "string" ? { ...state, draft: state.draft + d.text } : state;
+      return d.agent === "continuation" && typeof d.text === "string" ? { ...state, draft: canonicaliseChapterProse(state.draft + d.text) } : state;
     case "agent-complete": {
       if (!AGENTS.includes(d.agent as string)) return state;
       const agent = d.agent as AgentName;
@@ -65,7 +72,7 @@ export function passReducer(state: PassView, action: PassAction): PassView {
       if (agent === "outline") next.outline = d.output;
       if (agent === "style") next.style = d.output;
       if (agent === "continuation" && isRecord(d.output) && typeof d.output.draft === "string") {
-        next.draft = d.output.draft;
+        next.draft = canonicaliseChapterProse(d.output.draft);
         next.wordCount = Number(d.output.wordCount);
       }
       return next;
@@ -75,7 +82,7 @@ export function passReducer(state: PassView, action: PassAction): PassView {
       return { ...state, currentAgent: null, completedAgents: [...new Set([...state.completedAgents, "continuity" as const])], continuity: { status: d.status, failures: Array.isArray(d.failures) ? (d.failures as ContinuityResult["failures"]) : [] } };
     case "chapter-accepted":
       // Only a full validated event with an APPROVED verdict creates a chapter.
-      return isAccepted(d.chapter, state.chapterNumber) && state.continuity?.status === "APPROVED" ? { ...state, accepted: structuredClone(d.chapter) } : state;
+      return isAccepted(d.chapter, state.chapterNumber) && state.continuity?.status === "APPROVED" ? { ...state, accepted: canonicalChapter(d.chapter) } : state;
     case "relay-receipt":
       return isRecord(d) && Array.isArray(d.steps) ? { ...state, receipt: structuredClone(d) as unknown as RelayReceipt } : state;
     case "error":
