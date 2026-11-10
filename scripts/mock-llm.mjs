@@ -52,10 +52,18 @@ function style(user, n) {
   };
 }
 
+/**
+ * Drafts sit between chapter_min and chapter_max with about a third dialogue, so
+ * they pass the server's length and dialogue floors (lib/text-units.ts).
+ */
 function draft(user, n) {
   const zh = param(user, "story_language") === "zh";
-  if (zh) return `# 模拟第${n}章\n\n${"这是测试用的模拟正文。".repeat(12)}\n\n${"故事在这里继续推进。".repeat(10)}`;
-  return `# Mock Chapter ${n}\n\n${"This is mock prose for the test environment. ".repeat(12)}\n\n${"The story moves on here. ".repeat(10)}`;
+  if (zh) {
+    const para = `${"这是测试用的模拟正文。".repeat(3)}甲说：“今晚我们要守住这个信号。”乙答：“我们一定会守住这个信号。”`;
+    return `# 模拟第${n}章\n\n${Array.from({ length: 23 }, () => para).join("\n")}`;
+  }
+  const para = `${"This is mock prose for the test environment. ".repeat(3)}"We keep the signal steady tonight," one voice said. "We keep the signal steady tonight," another voice said.`;
+  return `# Mock Chapter ${n}\n\n${Array.from({ length: 18 }, () => para).join("\n\n")}`;
 }
 
 function verdict(user, n) {
