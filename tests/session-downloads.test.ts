@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bibleJson, chapterMarkdown, safeFileName, storyMarkdown } from "@/lib/downloads";
+import { EMPTY_PASS, passReducer, type PassAction } from "@/lib/pass-reducer";
 import { createEmptySession, deriveLedger, restoreSession, serialiseSession } from "@/lib/session";
 import { analyseStyle } from "@/lib/style-analyser";
 import { acceptedChapter, validBible } from "./fixtures-bible";
@@ -72,6 +73,35 @@ describe("downloads (T-12)", () => {
     expect(md.indexOf("## Chapter 1")).toBeLessThan(md.indexOf("## Chapter 2"));
     expect(md.indexOf("## Chapter 2")).toBeLessThan(md.indexOf("## Chapter 3"));
     expect(storyMarkdown("S", [], { replay: true })).toContain("Replay");
+  });
+  it("round-trips dialogue quotes through the frontend store and Markdown export", () => {
+    const rawProse = '# Title 1\n\n\\"We should leave now,\\" she said.';
+    const actions: PassAction[] = [
+      { type: "event", event: "run-start", data: { runId: "round-trip", chapterNumber: 1, retryCount: 0 } },
+      { type: "event", event: "continuity", data: { runId: "round-trip", status: "APPROVED", failures: [] } },
+      { type: "event", event: "chapter-accepted", data: { runId: "round-trip", chapter: { ...acceptedChapter(1), prose: rawProse } } },
+    ];
+    const pass = actions.reduce(passReducer, EMPTY_PASS);
+    expect(pass.accepted?.prose).toBe(`# Title 1\n\n"We should leave now," she said.`);
+    expect(pass.accepted?.prose).not.toContain('\\"');
+
+    const legacySession = {
+      ...createEmptySession(),
+      styleProfile: profile,
+      bible: validBible(),
+      acceptedChapters: [{ ...pass.accepted!, prose: rawProse }],
+    };
+    const serialized = serialiseSession(legacySession);
+    expect(JSON.parse(serialized).acceptedChapters[0].prose).toBe(`# Title 1\n\n"We should leave now," she said.`);
+    expect(legacySession.acceptedChapters[0]!.prose).toBe(rawProse);
+
+    const restored = restoreSession(JSON.stringify(legacySession));
+    const chapter = restored.session.acceptedChapters[0]!;
+    expect(chapter.prose).toBe(`# Title 1\n\n"We should leave now," she said.`);
+    const markdown = chapterMarkdown(chapter);
+    expect(markdown).toContain('"We should leave now," she said.');
+    expect(markdown).not.toContain('\\"');
+    expect(chapterMarkdown({ ...chapter, prose: rawProse })).not.toContain('\\"');
   });
   it("makes ASCII file names", () => {
     expect(safeFileName("我的 Story: Part 1", "md")).toBe("story-part-1.md");

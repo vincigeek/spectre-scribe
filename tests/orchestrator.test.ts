@@ -212,6 +212,25 @@ describe("continuation check feedback (live zh finding 2026-11-08)", () => {
     expect(events.map((e) => e.event)).toContain("chapter-accepted");
   });
 
+  it("repairs a short English draft with the measured length feedback", async () => {
+    const shortDraft = `# A Title\n\n${"\"Go now,\" she said. ".repeat(80)}${sentence(300)}`;
+    const escapedGoodDraft = goodDraft.replaceAll('"', String.fromCharCode(92) + '"');
+    const f = queueContClient([shortDraft, escapedGoodDraft]);
+    const events: PassEvent[] = [];
+
+    await runChapterPass(input(), { client: f.client, definitions: defs, emit: (e) => events.push(e) });
+
+    const continuationCalls = f.calls.filter((c) => c.messages[0]!.content.startsWith("CONT"));
+    expect(f.calls.map((c) => c.messages[0]!.content.split(" ")[0])).toEqual(["OUTLINE", "STYLE", "CONT", "CONT", "JUDGE"]);
+    expect(continuationCalls).toHaveLength(2);
+    expect(continuationCalls[1]!.messages[1]!.content).toContain("The draft has 622 words; at least 640 is required.");
+    expect(continuationCalls[1]!.messages[1]!.content).toContain("at least 800 words");
+    expect(continuationCalls.every((c) => c.maxTokens === 1600)).toBe(true);
+    expect(events.find((e) => e.event === "chapter-accepted")).toMatchObject({ data: { wordCount: 662 } });
+    const accepted = events.find((e) => e.event === "chapter-accepted") as Extract<PassEvent, { event: "chapter-accepted" }>;
+    expect(accepted.data.chapter.prose).not.toContain('\\"');
+  });
+
   it("fails the pass after three low-dialogue drafts", async () => {
     const events: PassEvent[] = [];
     const f = queueContClient([lowDialogue, lowDialogue, lowDialogue]);

@@ -4,13 +4,14 @@
  */
 import type { AcceptedChapter } from "./pipeline-types";
 import type { StoryBible } from "./story-bible";
+import { canonicaliseChapterProse } from "./prose";
 
 export function bibleJson(bible: StoryBible): string {
   return `${JSON.stringify(bible, null, 2)}\n`;
 }
 
 export function chapterMarkdown(chapter: AcceptedChapter): string {
-  const prose = chapter.prose.replace(/^#\s+.*\n+/, "").trim(); // drop a model-written H1
+  const prose = canonicaliseChapterProse(chapter.prose).replace(/^#\s+.*\n+/, "").trim(); // drop a model-written H1
   return `# Chapter ${chapter.chapterNumber}: ${chapter.title}\n\n${prose}\n`;
 }
 

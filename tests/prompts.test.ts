@@ -36,7 +36,7 @@ describe("run parameters (REQ-27)", () => {
       "story_language: zh\nlength_unit: 字\nlogline_max: 30\nstyle_anchor_max: 700\nchapter_target: 1320\nchapter_min: 1200\ndialogue_min: 25%\nchapter_max: 1800 (soft guidance; try not to exceed it without truncating a complete scene)",
     );
     expect(runParametersBlock({ chapterNumber: 1, styleProfile: enProfile })).toContain("arc_role: setup-hook");
-    expect(runParametersBlock({ chapterNumber: 1, styleProfile: enProfile })).toContain("chapter_target: 704\nchapter_min: 640\ndialogue_min: 25%\nchapter_max: 960 (soft guidance; try not to exceed it without truncating a complete scene)");
+    expect(runParametersBlock({ chapterNumber: 1, styleProfile: enProfile })).toContain("chapter_target: 800\nchapter_min: 640\ndialogue_min: 25%\nchapter_max: 960 (soft guidance; try not to exceed it without truncating a complete scene)");
   });
   it("has zh output caps about 1.6x en", () => {
     for (const a of ["outline", "style", "continuation", "continuity"] as const) {
@@ -54,6 +54,11 @@ describe("buildMessages (T-14)", () => {
       expect(user!.content).toContain(s);
     }
     expect(user!.content).not.toContain("VETO NOTES");
+  });
+  it("gives English first drafts an explicit safety margin above the floor", () => {
+    const message = buildMessages("continuation", "D", ctx)[1]!.content;
+    expect(message).toContain("For English, write at least 800 words on the first draft");
+    expect(message).toContain("do not stop near the 640-word floor");
   });
   it("adds veto notes only on retry and earlier outputs only for later agents", () => {
     const outline = { mode: "chapter" as const, chapterNumber: 2, arcRole: "escalation" as const, beats: [] };

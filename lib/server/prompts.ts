@@ -116,6 +116,11 @@ function continuationTask(ctx: PassContext): string {
   instructions.push(
     `Aim for chapter_target. Treat chapter_max as soft guidance: try not to exceed it, but do not truncate a complete scene or omit a beat to meet it.`,
   );
+  if (ctx.styleProfile.language === "en") {
+    instructions.push(
+      `For English, write at least ${limits.chapterTarget} words on the first draft; do not stop near the 640-word floor.`,
+    );
+  }
   if (ctx.chapterNumber === 3) {
     instructions.push(
       `Chapter 3 is the payoff chapter: give each payoff, resolution, and epiphany beat concrete action, dialogue, sensory detail, and a consequence; aim for chapter_target and, where possible, stay near or below the soft chapter_max without cutting a complete scene.`,
