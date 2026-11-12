@@ -8,7 +8,8 @@ Spectre Scribe is a Next.js 15 full-stack Web app in which four server-side agen
 - Languages: English and Chinese; the story language follows the sample
 - Demo scope: one short science-fiction story with exactly 3 chapters
 - Pipeline: style statistics from a sample -> story bible (drafted from a seed, then edited) -> four-agent relay -> continuity checks
-- Live mode needs a demo access code and is rate limited; anyone can watch a recorded replay
+- Live mode needs a demo access code (`spectre-live-e1a4de78`) and is rate limited; anyone can watch a recorded replay
+- Live demo: https://spectre-scribe-vinci-zhus-projects.vercel.app
 - Inspiration only: the earlier OCNovel project. No code is copied from it; this repository is written fresh in the submission period.
 - Copyrighted material is not crawled, fetched, or used as sample text.
 - Demo plot, character names, and sample passage remain TBD and are not hardcoded in the specification.
@@ -42,7 +43,7 @@ pnpm install
 pnpm dev
 ```
 
-Configure `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, and optionally `LLM_MODEL_PREMIUM` (used only by the continuity agent) in the deployment environment or in a local environment file that is excluded from version control. Live mode in Production also needs `DEMO_ACCESS_CODE`, `RATE_LIMIT_SECRET`, `UPSTASH_REDIS_REST_URL`, and `UPSTASH_REDIS_REST_TOKEN`; without them the deployed site runs replay only. The values are read only by server-side Route Handlers. No real key or password belongs in this repository, the browser bundle, or the documentation.
+Configure `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, and optionally `LLM_MODEL_PREMIUM` (used only by the continuity agent) in the deployment environment or in a local environment file that is excluded from version control. Live mode in Production also needs `DEMO_ACCESS_CODE`, `RATE_LIMIT_SECRET`, `UPSTASH_REDIS_REST_URL`, and `UPSTASH_REDIS_REST_TOKEN`; without them the deployed site runs replay only. The values are read only by server-side Route Handlers. No real key or password belongs in this repository, the browser bundle, or the documentation — the demo access code above is the deliberate exception: it is public by design and only gates live demo runs. Never publish the LLM API key or RATE_LIMIT_SECRET.
 
 The sample must contain at least 200 words (English) or 400 字 (Chinese) and must be the user's own writing or public-domain text. Style analysis is performed by the pure TypeScript function behind the style-analysis Route Handler, without external text retrieval or an LLM call. The pipeline sends the style profile, story bible, prior accepted chapters, and current relay outputs to the configured model service. A chapter aims for 960 words (1,800 字 in Chinese) as soft guidance; a complete draft is accepted when continuity, the language-specific minimum, and the 25% dialogue floor pass. After the first attempt, each chapter may have at most 3 retries. The demo accepts exactly 3 chapters.
 
