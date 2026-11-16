@@ -45,9 +45,9 @@ describe("agent loader (T-13)", () => {
 });
 
 describe("request body", () => {
-  it("uses the standard model, the token field, and strict JSON schema", () => {
+  it("uses the standard model, low reasoning, the token field, and strict JSON schema", () => {
     const b = buildRequestBody(config, { ...req, jsonSchema: { name: "x", schema: { type: "object" } } }, DEFAULT_DIALECT);
-    expect(b).toMatchObject({ model: "std", max_completion_tokens: 600, response_format: { type: "json_schema", json_schema: { strict: true } } });
+    expect(b).toMatchObject({ model: "std", max_completion_tokens: 600, reasoning_effort: "low", response_format: { type: "json_schema", json_schema: { strict: true } } });
     expect(b).not.toHaveProperty("temperature");
   });
   it("routes premium calls without sampling params and with low reasoning effort", () => {

@@ -141,8 +141,8 @@ export async function runChapterPass(input: PassInput, deps: PassDeps): Promise<
     if (!outline || !style) {
       // The outline check is a cross-field rule (every beat must plant or pay
       // off foreshadowing) that prose and JSON Schema cannot enforce through
-      // this provider: flash-lite left a beat bare in 7 of 7 live attempts
-      // (2026-11-08), and a bare `anyOf` schema is accepted but ignored.
+      // this provider: a prior standard-model run left a beat bare in 7 of 7
+      // live attempts, and a bare `anyOf` schema is accepted but ignored.
       // Retry the outline call at most MAX_OUTLINE_ATTEMPTS times inside the
       // pass, feeding the exact check issues back, instead of failing the
       // whole pass on the first miss.

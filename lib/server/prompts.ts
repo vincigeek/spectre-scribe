@@ -13,10 +13,13 @@ import type { ChatMessage } from "./model-client";
 export const ARC_ROLES = { 1: "setup-hook", 2: "escalation", 3: "payoff" } as const;
 export type ArcRole = (typeof ARC_ROLES)[1 | 2 | 3];
 
-/** Output caps per agent and language (tech.md; zh about 1.6x). */
+/**
+ * Output caps for low-reasoning Hydrogen standard calls, with separate Chinese
+ * headroom. Continuity remains on the premium tier and keeps its existing caps.
+ */
 export const OUTPUT_CAPS: Readonly<Record<Language, Readonly<Record<AgentName, number>>>> = Object.freeze({
-  en: Object.freeze({ outline: 600, style: 900, continuation: 1600, continuity: 800 }),
-  zh: Object.freeze({ outline: 1000, style: 1500, continuation: 2600, continuity: 1300 }),
+  en: Object.freeze({ outline: 2000, style: 2500, continuation: 5000, continuity: 800 }),
+  zh: Object.freeze({ outline: 3000, style: 3500, continuation: 7000, continuity: 1300 }),
 });
 
 export type OutlineBeat = {

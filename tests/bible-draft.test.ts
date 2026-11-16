@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkCore, checkStructure, handleBibleDraftRequest, parseSeed, type BibleCore } from "@/lib/server/bible-draft";
+import { checkCore, checkStructure, DRAFT_CAPS, handleBibleDraftRequest, parseSeed, type BibleCore } from "@/lib/server/bible-draft";
 import type { ChatRequest, ModelClient } from "@/lib/server/model-client";
 import { analyseStyle } from "@/lib/style-analyser";
 import { sentence } from "./fixtures";
@@ -27,6 +27,10 @@ const structureDraft = {
 const core = (() => { const c = checkCore(coreDraft, seed, profile); if (!c.ok) throw new Error(c.issues.join()); return c.value; })();
 
 describe("seed", () => {
+  it("uses the measured Hydrogen plan caps", () => {
+    expect(DRAFT_CAPS).toEqual({ en: 3000, zh: 4500 });
+  });
+
   it("accepts a valid seed and rejects a long idea or notes", () => {
     expect(parseSeed(seed, profile).ok).toBe(true);
     expect(parseSeed({ ...seed, idea: "One. Two. Three." }, profile).ok).toBe(false);
@@ -85,6 +89,7 @@ describe("POST /api/bible/draft (T-11a)", () => {
     expect((await res.json()).draft.logline).toBe(coreDraft.logline);
     expect(calls).toHaveLength(1);
     expect(calls[0]!.tier).toBe("standard");
+    expect(calls[0]!.maxTokens).toBe(DRAFT_CAPS.en);
     expect(calls[0]!.jsonSchema?.name).toBe("bible_core");
     expect(calls[0]!.jsonSchema?.schema).toMatchObject({ required: ["mode", "layer", "logline", "synopsis", "setting", "characters"] });
     expect(calls[0]!.messages[1]!.content).toContain("mode: plan\nlayer: core");

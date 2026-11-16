@@ -18,7 +18,7 @@ export type BibleCore = Pick<StoryBible, "logline" | "synopsis" | "setting" | "c
 export type BibleStructure = Pick<StoryBible, "foreshadowing" | "timeline" | "beatSheet">;
 export type DraftLayer = "core" | "structure";
 
-export const DRAFT_CAPS = { en: 1200, zh: 2000 } as const;
+export const DRAFT_CAPS = { en: 3000, zh: 4500 } as const;
 export const SEED_NOTES_MAX = 600;
 const MAX_BODY = 128 * 1024;
 
