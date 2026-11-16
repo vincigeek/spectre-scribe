@@ -36,11 +36,17 @@ export type ChatResult =
 export type Dialect = {
   /** Token-limit field the provider accepts (recorded by the provider contract test). */
   tokenField: "max_completion_tokens" | "max_tokens";
+  /** Sent on standard calls to bound thinking on reasoning models. */
+  standardReasoningEffort?: "low";
   /** Sent only on premium calls, to keep the slow judge model fast. */
   premiumReasoningEffort?: "minimal" | "low";
 };
 
-export const DEFAULT_DIALECT: Dialect = { tokenField: "max_completion_tokens", premiumReasoningEffort: "low" };
+export const DEFAULT_DIALECT: Dialect = {
+  tokenField: "max_completion_tokens",
+  standardReasoningEffort: "low",
+  premiumReasoningEffort: "low",
+};
 
 export type ClientOptions = {
   fetchImpl?: typeof fetch;
@@ -79,6 +85,8 @@ export function buildRequestBody(config: ModelConfig, req: ChatRequest, dialect:
   if (req.jsonSchema) {
     body.response_format = { type: "json_schema", json_schema: { name: req.jsonSchema.name, strict: req.jsonSchema.strict ?? true, schema: req.jsonSchema.schema } };
   }
+  // Hydrogen is a thinking model; bound standard-call reasoning explicitly.
+  if (req.tier === "standard" && dialect.standardReasoningEffort) body.reasoning_effort = dialect.standardReasoningEffort;
   // Premium model ignores sampling params; never send them (design §2.4).
   if (req.tier === "premium" && dialect.premiumReasoningEffort) body.reasoning_effort = dialect.premiumReasoningEffort;
   return body;

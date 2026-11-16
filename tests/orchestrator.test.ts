@@ -124,7 +124,7 @@ describe("runChapterPass (T-15, T-17)", () => {
   });
 });
 
-describe("outline check feedback (live flash-lite finding 2026-11-08)", () => {
+describe("outline check feedback (live standard-model finding)", () => {
   const bareBeat = { ...outline.beats[0], title: "Bare", foreshadowingPlanted: [], foreshadowingPaidOff: [] };
   const badOutline = JSON.stringify({ ...outline, beats: [outline.beats[0], bareBeat] });
   const goodOutline = JSON.stringify(outline);
@@ -225,7 +225,7 @@ describe("continuation check feedback (live zh finding 2026-11-08)", () => {
     expect(continuationCalls).toHaveLength(2);
     expect(continuationCalls[1]!.messages[1]!.content).toContain("The draft has 622 words; at least 640 is required.");
     expect(continuationCalls[1]!.messages[1]!.content).toContain("at least 800 words");
-    expect(continuationCalls.every((c) => c.maxTokens === 1600)).toBe(true);
+    expect(continuationCalls.every((c) => c.maxTokens === 5000)).toBe(true);
     expect(events.find((e) => e.event === "chapter-accepted")).toMatchObject({ data: { wordCount: 662 } });
     const accepted = events.find((e) => e.event === "chapter-accepted") as Extract<PassEvent, { event: "chapter-accepted" }>;
     expect(accepted.data.chapter.prose).not.toContain('\\"');
@@ -271,7 +271,7 @@ describe("continuation check feedback (live zh finding 2026-11-08)", () => {
     expect(continuationCalls[1]!.messages[1]!.content).toContain("The draft has 734 字; at least 1200 is required.");
     expect(continuationCalls[1]!.messages[1]!.content).toContain("expand every outline beat into its own full scene");
     expect(continuationCalls[1]!.messages[1]!.content).toContain("at least 1320 字");
-    expect(continuationCalls.every((c) => c.maxTokens === 2600)).toBe(true);
+    expect(continuationCalls.every((c) => c.maxTokens === 7000)).toBe(true);
     const accepted = events.find((e) => e.event === "chapter-accepted");
     expect(accepted).toMatchObject({ data: { chapterNumber: 2 } });
     expect((accepted as Extract<PassEvent, { event: "chapter-accepted" }>).data.wordCount).toBeGreaterThanOrEqual(1200);
@@ -306,7 +306,7 @@ describe("continuation check feedback (live zh finding 2026-11-08)", () => {
     expect(continuationCalls).toHaveLength(2);
     expect(continuationCalls[1]!.messages[1]!.content).toContain("The draft has 830 字; at least 1200 is required.");
     expect(continuationCalls[1]!.messages[1]!.content).toContain("expand every outline beat into its own full scene");
-    expect(continuationCalls.every((c) => c.maxTokens === 2600)).toBe(true);
+    expect(continuationCalls.every((c) => c.maxTokens === 7000)).toBe(true);
     expect(events.find((e) => e.event === "chapter-accepted")).toMatchObject({ data: { chapterNumber: 3, wordCount: 1200 } });
   });
 });

@@ -187,7 +187,9 @@ Two model tiers (decided 2026-11-07, revised 2026-11-08): the standard model
 `LLM_MODEL_PREMIUM` serves continuity only, because it is the judge and
 benefits most from the stronger model. `LLM_MODEL_PREMIUM` is optional: when
 it is unset, `LLM_MODEL` serves continuity too. Current values: standard
-`gemini-3.5-flash-lite`, premium `gemini-3.5-flash`. Premium history: the seat
+`gemini-4-hydrogen`, premium `gemini-3.5-flash`. Hydrogen is a thinking model, so
+standard calls set `reasoning_effort: low` and use measured per-agent caps below;
+premium calls retain their existing low-reasoning path. Premium history: the seat
 was first held by `gemini-4-argon` (half-price $2 input / $10 output per 1M
 tokens to 2026-11-30, doubling 2026-12-01), retired 2026-11-08 after a real
 continuity call measured over 180 s against the 110 s pass deadline; the
@@ -237,8 +239,9 @@ pass uses the following order:
 4. **Continuity agent** reads all previous inputs plus the draft and returns
    `APPROVED` or `VETO` with structured failures. It does not rewrite the draft.
 
-Initial output caps are constants: outline 600 tokens, style 900, continuation
-1,600, and continuity 800 (English; Chinese caps are in §2.11). Strict JSON Schema is requested for outline and
+Initial output caps are constants for the low-reasoning Hydrogen standard calls: outline
+2,000 tokens, style 2,500, continuation 5,000, and continuity 800 on the unchanged
+premium path (English; Chinese caps are in §2.11). Strict JSON Schema is requested for outline and
 continuity when the configured provider supports it. The server still parses and
 validates every result, and treats refusal, incomplete output, invalid JSON, and
 schema mismatch as failures. A continuation result is never accepted from a
@@ -688,9 +691,9 @@ server count always agree.
 | Dialogue minimum (REQ-20) | 25% | 25% |
 | Dialogue target (soft) | 25–35% | 25–35% |
 | Chapter maximum (soft guidance; REQ-20) | 960 words | 1,800 字 |
-| Outline output cap | 600 tokens | 1,000 tokens |
-| Style output cap | 900 tokens | 1,500 tokens |
-| Continuation output cap | 1,600 tokens | 2,600 tokens |
+| Outline output cap | 2,000 tokens | 3,000 tokens |
+| Style output cap | 2,500 tokens | 3,500 tokens |
+| Continuation output cap | 5,000 tokens | 7,000 tokens |
 | Continuity output cap | 800 tokens | 1,300 tokens |
 
 The chapter generation target is `ceil(chapter_min × 1.1)` (704 words / 1,320 字
@@ -704,8 +707,11 @@ server recounts dialogue share with the same paired-delimiter measure as the sty
 profile (REQ-26c) and rejects a draft below 25% with the `dialogue-share` error code,
 retryable as a chapter retry.
 
-The `zh` token caps are about 1.6 times the `en` caps. They are a starting guess,
-because tokens per 字 differ between model tokenizers.
+These are measured starting budgets for low-reasoning Hydrogen calls, so the Chinese
+values provide per-agent headroom for character-oriented output rather than applying
+a single multiplier. Continuity remains on the premium tier with its existing caps.
+The budgets are tunable only from measured usage; they do not change any language
+length limit or acceptance gate.
 
 **Language detection.** `detectLanguage` follows REQ-25 in order. First, if
 hiragana, katakana, hangul, and Thai are at least 5% of letter characters, the
@@ -837,8 +843,9 @@ type BibleDraftResponse =
 ```
 
 **Run parameters.** The block carries `mode: plan`, `layer`, and the language
-fields of §2.11. Output caps: `core` 1,200 tokens (`zh` 2,000), `structure`
-1,200 tokens (`zh` 2,000). These are starting values.
+fields of §2.11. Low-reasoning Hydrogen output caps: `core` 3,000 tokens (`zh`
+4,500), `structure` 3,000 tokens (`zh` 4,500). These are starting values with
+headroom for thinking tokens.
 
 **Server checks.** The server never trusts the model's counts.
 
