@@ -38,10 +38,9 @@ describe("run parameters (REQ-27)", () => {
     expect(runParametersBlock({ chapterNumber: 1, styleProfile: enProfile })).toContain("arc_role: setup-hook");
     expect(runParametersBlock({ chapterNumber: 1, styleProfile: enProfile })).toContain("chapter_target: 800\nchapter_min: 640\ndialogue_min: 25%\nchapter_max: 960 (soft guidance; try not to exceed it without truncating a complete scene)");
   });
-  it("has zh output caps about 1.6x en", () => {
-    for (const a of ["outline", "style", "continuation", "continuity"] as const) {
-      expect(OUTPUT_CAPS.zh[a] / OUTPUT_CAPS.en[a]).toBeGreaterThan(1.5);
-    }
+  it("uses measured Hydrogen caps with separate Chinese headroom", () => {
+    expect(OUTPUT_CAPS.en).toEqual({ outline: 2000, style: 2500, continuation: 5000, continuity: 800 });
+    expect(OUTPUT_CAPS.zh).toEqual({ outline: 3000, style: 3500, continuation: 7000, continuity: 1300 });
   });
 });
 

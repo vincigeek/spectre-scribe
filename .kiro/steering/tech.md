@@ -99,7 +99,10 @@ provider-specific client in every agent wrapper.
    guess a dialect from a model name or retry a 400 unsupported-parameter response. If the
    selected endpoint does not satisfy the tested dialect, return a safe configuration error.
    An equivalent Responses API may be added behind the same interface only after a provider
-   contract test.
+   contract test. Standard calls for the Hydrogen content model set
+   `reasoning_effort: low` so thinking tokens remain bounded; the premium continuity
+   path keeps its existing low-reasoning setting. The browser and agent wrappers never
+   choose either setting.
 5. Use provider streaming only for prose where incremental display helps. Parse upstream
    events in the server and emit the project's typed events; never forward raw provider
    frames or provider error bodies to the browser.
@@ -114,15 +117,18 @@ Initial output budgets are deliberately bounded and must be constants covered by
 
 | Agent output | Initial cap | Additional server check |
 | --- | ---: | --- |
-| Outline | 600 output tokens | No more than eight beats; structured outline only |
-| Style | 900 output tokens | Style anchor no more than 400 words |
-| Continuation | 1,600 output tokens | Aim for the soft chapter guidance; enforce only the chapter minimum and dialogue floor |
+| Outline | 2,000 output tokens | No more than eight beats; structured outline only |
+| Style | 2,500 output tokens | Style anchor no more than 400 words |
+| Continuation | 5,000 output tokens | Aim for the soft chapter guidance; enforce only the chapter minimum and dialogue floor |
 | Continuity | 800 output tokens | `APPROVED` or structured `VETO`; no prose rewrite |
 
-The table shows English values. Chinese runs use about 1.6 times the token caps (outline
-1,000, style 1,500, continuation 2,600, continuity 1,300) and the Chinese length limits in
-`requirements.md` REQ-24 (anchor 700 字, soft chapter guidance 1,800 字). These are starting values; tune them
-in the performance task.
+The table shows English values. Chinese runs use the measured per-agent caps outline
+3,000, style 3,500, continuation 7,000, and continuity 1,300. The Chinese length limits in
+`requirements.md` REQ-24 (anchor 700 字, soft chapter guidance 1,800 字) remain unchanged.
+These are starting budgets with per-agent headroom for Hydrogen's low-reasoning calls;
+tune them from measured usage, not by applying a fixed language multiplier.
+Bible plan-mode calls use the same measured standard-model budget for both layers:
+3,000 tokens in English and 4,500 in Chinese.
 
 The compatible client must use the token-limit field accepted by the selected provider and
 keep that translation inside the adapter. It must not silently omit a cap. The first provider
